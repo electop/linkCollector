@@ -56,17 +56,16 @@ def checkTail(str):
     else:
         return str
 
-def indicator(tu, progress):
+def indicator():
 
-    global start, num	# start: starting time
+    global start, num, count	# start: starting time
 
     end = time.time()
     cs = end - start
     cm = cs // 60
     cs = "{0:.1f}".format(cs % 60)
-    sv = "{0:.1f}".format((progress * 100) / num) + '%'
-    print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, progress, num, cm, cs))
-    #print ('%s' %tu)
+    sv = "{0:.1f}".format((count * 100) / num) + '%'
+    print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, count, num, cm, cs))
     return True
 
 def getCode(tu):
@@ -89,7 +88,7 @@ def getCode(tu):
     count += 1
     rows = [tu, code]
     rdf.loc[len(rdf)] = rows
-    indicator(tu, count)
+    indicator()
 
     return status
 
@@ -159,12 +158,12 @@ def result(tu):
     path = datetime.now().strftime('%Y-%m-%d_%H-%M_') + target + '.csv'
     rdf.to_csv(path, header=True, index=True)
 
-    return len(df)
+    return len(rdf)
 
 if __name__ == "__main__":
 
     if init():
-        while count == 0 or count < len(df):
+        while count == 0 or count < num:
             runMutithread(url)
         dnum = result(url)
         end = time.time()
