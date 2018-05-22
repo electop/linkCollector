@@ -149,9 +149,9 @@ def result(tu):
 
     global df, path
 
-    #rdf = df.sort_values(by=['link'], ascending=[True])
-    #rdf = df.drop_duplicates(subset=['link'], keep='first')
-    #rdf.index = range(len(df))
+    rdf = rdf.sort_values(by=['link'], ascending=[True])
+    rdf = rdf.drop_duplicates(subset=['link'], keep='first')
+    rdf.index = range(len(rdf))
     print ('[OK] Result')
     print (rdf)
     target = tu.replace('://','_').replace('/','_')
