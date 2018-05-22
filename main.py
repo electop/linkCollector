@@ -12,7 +12,7 @@ start = time.time()
 num, maxnum, count = 1, 0, 0
 cu, du, url, prefix, path = '', '', '', '', ''
 df = DataFrame(columns=('link', 'visited'))
-df = DataFrame(columns=('link', 'code'))
+rdf = DataFrame(columns=('link', 'code'))
 
 def init():
 
@@ -71,7 +71,7 @@ def indicator(tu, progress):
 
 def getCode(tu):
 
-    global df, count	# count: # data frame excluding duplication
+    global df, rdf, count	# rdf: data frame for final result, count: # data frame excluding duplication
     code = ''
     status = False
 
@@ -87,8 +87,8 @@ def getCode(tu):
         print('[ERR] We failed to reach\n%s\n[ERR]%s' %(tu, code))
 
     count += 1
-    rows = [tu, 1, code]
-    df.loc[len(df)] = rows
+    rows = [tu, code]
+    rdf.loc[len(rdf)] = rows
     indicator(tu, count)
 
     return status
@@ -100,6 +100,8 @@ def getLink(tu, visited):
     if visited == 1:
         return False
     elif getCode(tu):
+        rows = [tu, 1]
+        df.loc[len(df)] = rows
         html = urlopen(tu)
         soup = BeautifulSoup(html, 'lxml')
         for link in soup.findAll('a', attrs={'href': re.compile('^http')}):
@@ -107,7 +109,7 @@ def getLink(tu, visited):
             nl = checkTail(nl)
             if nl.find(cu) > 0 and nl != tu:
                 maxnum += 1
-                rows = [nl, 0, 0]
+                rows = [nl, 0]
                 df.loc[len(df)] = rows
                 #print ('+ Adding rows:\n', rows)
         for link in soup.findAll('a', attrs={'href': re.compile('^/')}):
@@ -119,7 +121,7 @@ def getLink(tu, visited):
             nl = checkTail(nl)
             if nl.find(cu) > 0:
                 maxnum += 1
-                rows = [nl, 0, 0]
+                rows = [nl, 0]
                 df.loc[len(df)] = rows
                 #print ('+ Adding rows:\n', rows)
         df = df.sort_values(by=['visited', 'link'], ascending=[False, True])
@@ -128,6 +130,8 @@ def getLink(tu, visited):
         num = len(df)
         return True
     else:
+        rows = [tu, 1]
+        df.loc[len(df)] = rows
         return False
 
 def runMutithread(tu):
@@ -146,14 +150,14 @@ def result(tu):
 
     global df, path
 
-    df = df.sort_values(by=['link', 'visited'], ascending=[True, False])
-    df = df.drop_duplicates(subset=['link'], keep='first')
-    df.index = range(len(df))
+    #rdf = df.sort_values(by=['link'], ascending=[True])
+    #rdf = df.drop_duplicates(subset=['link'], keep='first')
+    #rdf.index = range(len(df))
     print ('[OK] Result')
-    print (df)
+    print (rdf)
     target = tu.replace('://','_').replace('/','_')
     path = datetime.now().strftime('%Y-%m-%d_%H-%M_') + target + '.csv'
-    df.to_csv(path, header=True, index=True)
+    rdf.to_csv(path, header=True, index=True)
 
     return len(df)
 
