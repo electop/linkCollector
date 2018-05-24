@@ -56,21 +56,24 @@ def checkTail(str):
     else:
         return str
 
-def indicator():
+def indicator(counts):
 
-    global start, num, count	# start: starting time
+    global start, num
 
     end = time.time()
     cs = end - start
     cm = cs // 60
     cs = "{0:.1f}".format(cs % 60)
-    sv = "{0:.1f}".format((count * 100) / num) + '%'
-    print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, count, num, cm, cs))
+    sv = "{0:.1f}".format((counts * 100) / num) + '%'
+    if counts == 1:
+        print ('+ Searching target URL: %d(min) %s(sec)' %(cm, cs))
+    else:
+        print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, counts, num, cm, cs))
     return True
 
 def getCode(tu):
 
-    global df, rdf, count	# rdf: data frame for final result, count: # data frame excluding duplication
+    global rdf, count	# rdf: data frame for final result, count: # data frame excluding duplication
     code = ''
     status = False
 
@@ -85,10 +88,10 @@ def getCode(tu):
         code = e.reason
         print('[ERR] We failed to reach\n%s\n[ERR]%s' %(tu, code))
 
-    count += 1
+    count = count + 1
     rows = [tu, code]
     rdf.loc[len(rdf)] = rows
-    indicator()
+    indicator(count)
 
     return status
 
@@ -123,8 +126,8 @@ def getLink(tu, visited):
                 rows = [nl, 0]
                 df.loc[len(df)] = rows
                 #print ('+ Adding rows:\n', rows)
-        df = df.sort_values(by=['visited', 'link'], ascending=[False, True])
-        df = df.drop_duplicates(subset=['link'], keep='first')
+        df.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
+        df.drop_duplicates(subset='link', inplace=True, keep='first')
         df.index = range(len(df))
         num = len(df)
         return True
@@ -141,7 +144,7 @@ def runMutithread(tu):
     threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
     for thread in threads:
         thread.start()
-        time.sleep(1.3)
+        #time.sleep(0.5)
     for thread in threads:
         thread.join()
 
@@ -149,8 +152,8 @@ def result(tu):
 
     global df, path
 
-    rdf = rdf.sort_values(by=['link'], ascending=[True])
-    rdf = rdf.drop_duplicates(subset=['link'], keep='first')
+    rdf.sort_values(by='link', ascending=True, inplace=True)
+    rdf.drop_duplicates(subset='link', inplace=True, keep='first')
     rdf.index = range(len(rdf))
     print ('[OK] Result')
     print (rdf)
