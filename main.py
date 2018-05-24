@@ -21,7 +21,7 @@ def init():
     optionLen = len(args)
 
     if (len(args) <= 1):
-        print ('[ERR] There is no option')
+        print ('[ERR] There is no option.')
         return False
 
     for i in range(optionLen-1):
@@ -40,7 +40,7 @@ def init():
         prefix = 'https://'
         cu = url.replace('https://', '')
     else:
-        print ('[ERR] Please be sure to include "http://" or "https://" in the target URL')
+        print ('[ERR] Please be sure to include "http://" or "https://" in the target URL.')
         return False
 
     tokens = url.split('/')
@@ -58,17 +58,19 @@ def checkTail(str):
 
 def indicator(counts):
 
-    global start, num
+    global start
 
     end = time.time()
     cs = end - start
     cm = cs // 60
     cs = "{0:.1f}".format(cs % 60)
-    sv = "{0:.1f}".format((counts * 100) / num) + '%'
     if counts == 1:
         print ('+ Searching target URL: %d(min) %s(sec)' %(cm, cs))
     else:
-        print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, counts, num, cm, cs))
+        nums = len(df)
+        sv = "{0:.1f}".format((counts * 100) / nums) + '%'
+        print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, counts, nums, cm, cs))
+
     return True
 
 def getCode(tu):
@@ -79,14 +81,14 @@ def getCode(tu):
 
     try:
         code = str(urlopen(tu).getcode())
-        print('[OK] The server could fulfill the request to\n%s' %tu)
+        print('\n[OK] The server could fulfill the request to\n%s' %tu)
         status = True
     except HTTPError as e:
         code = str(e.code)
-        print('[ERR] The server couldn\'t fulfill the request to\n%s' %tu)
+        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s' %tu)
     except URLError as e:
         code = e.reason
-        print('[ERR] We failed to reach\n%s\n[ERR]%s' %(tu, code))
+        print('\n[ERR] URL ERror: We failed to reach\n%s\n+ %s' %(tu, code))
 
     count = count + 1
     rows = [tu, code]
@@ -97,7 +99,7 @@ def getCode(tu):
 
 def getLink(tu, visited):
 
-    global df, maxnum, num	# df: data frame, maxnum: maximum # of data frame, num : # data frame
+    global df, maxnum	# df: data frame, maxnum: maximum # of data frame
 
     if visited == 1:
         return False
@@ -129,7 +131,7 @@ def getLink(tu, visited):
         df.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
         df.drop_duplicates(subset='link', inplace=True, keep='first')
         df.index = range(len(df))
-        num = len(df)
+        #num = len(df)
         return True
     else:
         rows = [tu, 1]
@@ -138,13 +140,19 @@ def getLink(tu, visited):
 
 def runMutithread(tu):
 
+    threadingnum = 0
+
     if len(df) == 0:
         getLink(tu, 0)
 
     threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
     for thread in threads:
+        threadingnum = threading.active_count()
+        while threadingnum > 5:
+            time.sleep(0.5)
+            threadingnum = threading.active_count()
+            print ('+ Waiting 0.5 seconds to prevent threading overflow.')
         thread.start()
-        #time.sleep(0.5)
     for thread in threads:
         thread.join()
 
@@ -166,7 +174,7 @@ def result(tu):
 if __name__ == "__main__":
 
     if init():
-        while count == 0 or count < num:
+        while count == 0 or count < len(df):
             runMutithread(url)
         dnum = result(url)
         end = time.time()
