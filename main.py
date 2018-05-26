@@ -109,7 +109,7 @@ def getLink(tu, visited):
     count = 0
     status = getCode(tu)
 
-    if status:
+    if status and (tu.find('.png') < 0 or tu.find('jpeg') < 0 or tu.find('jpg') < 0):
         html = urlopen(tu)
         soup = BeautifulSoup(html, 'lxml')
         for link in soup.findAll('a', attrs={'href': re.compile('^http')}):
@@ -155,7 +155,7 @@ def runMultithread(tu):
     threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
     for thread in threads:
         threadingnum = threading.active_count()
-        while threadingnum > 10:
+        while threadingnum > 15:
             time.sleep(0.5)
             threadingnum = threading.active_count()
             print ('+ Waiting 0.5 seconds to prevent threading overflow.')
