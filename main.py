@@ -9,7 +9,7 @@ from pandas import Series, DataFrame
 from urllib.error import URLError, HTTPError
 
 start = time.time()
-num, maxnum, count = 1, 0, 0
+num, maxnum = 1, 0
 cu, du, url, prefix, path = '', '', '', '', ''
 df = DataFrame(columns=('link', 'visited'))
 rdf = DataFrame(columns=('link', 'code'))
@@ -75,7 +75,6 @@ def indicator(counts):
 def getCode(tu):
 
     global rdf		# rdf: data frame for final result
-    global count 	# count: # data frame excluding duplication
     code = ''
     status = False
 
@@ -90,16 +89,17 @@ def getCode(tu):
         code = e.reason
         print('\n[ERR] URL ERror: We failed to reach\n%s\n+ %s' %(tu, code))
 
-    count = count + 1
     rows = [tu, code]
     rdf.loc[len(rdf)] = rows
-    indicator(count)
+    counts = len(rdf)
+    indicator(counts)
 
     return status
 
 def getLink(tu, visited):
 
-    global df, maxnum, num	# df: data frame, maxnum: maximum # of data frame
+    global df	# df: data frame
+    global maxnum, num	# maxnum: maximum # of data frame
 
     if visited == 1:
         #print ('[OK] It\'s already visited to the URL below and skip.\n%s\n' %tu)
@@ -134,11 +134,13 @@ def getLink(tu, visited):
                     rows = [nl, 0]
                     df.loc[len(df)] = rows
                     #print ('+ Adding rows:\n', rows)
-        df.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
-        df.drop_duplicates(subset='link', inplace=True, keep='first')
-        df.index = range(len(df))
+        #df.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
+        #df.drop_duplicates(subset='link', inplace=True, keep='first')
+        #df.index = range(len(df))
         num = len(df)
         return True
+    else:
+        df.loc[df['link'] == tu, 'visited'] = 1
 
     return False
 
@@ -152,11 +154,14 @@ def runMultithread(tu):
     threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
     for thread in threads:
         threadingnum = threading.active_count()
-        while threadingnum > 5:
+        while threadingnum > 10:
             time.sleep(0.5)
             threadingnum = threading.active_count()
             print ('+ Waiting 0.5 seconds to prevent threading overflow.')
-        thread.start()
+        try:
+            thread.start()
+        except:
+            print ('[ERR] Caught an exception of "thread.start()".')
     for thread in threads:
         thread.join()
 
@@ -178,7 +183,7 @@ def result(tu):
 if __name__ == "__main__":
 
     if init():
-        while count == 0 or count < len(df):
+        while len(df) == 0 or len(df.loc[df['visited'] == 0]) > 0:
             runMultithread(url)
         dnum = result(url)
         end = time.time()
