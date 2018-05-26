@@ -10,12 +10,14 @@ from urllib.error import URLError, HTTPError
 
 start = time.time()
 num, maxnum = 1, 0
+maxthreads = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
 cu, du, url, prefix, path = '', '', '', '', ''
 df = DataFrame(columns=('link', 'visited'))
 rdf = DataFrame(columns=('link', 'code'))
 
 def init():
 
+    global maxthreads
     global cu, du, url, prefix		# cu: current URL, du: domain URL
     args = sys.argv[0:]
     optionLen = len(args)
@@ -28,7 +30,9 @@ def init():
         if args[i].upper() == '-T':	# -T: Target URL
             data = str(args[i+1])
             url = data
-            break
+        elif args[i].upper() == '-M':	# -M: Maximun number of threads
+            data = str(args[i+1])
+            maxthreads = int(data)
 
     if (url == ''):
         print ('[ERR] Please input required target URL.')
@@ -111,12 +115,11 @@ def getLink(tu, visited):
     #images = ['.bmp', '.rle', '.jpg', '.gif', '.png', '.psd', '.pdd', '.tif', '.pdf', '.raw', '.ai', '.eps', '.svg', '.iff', '.fpx', '.frm', '.pcx', '.pct', '.pic', '.pxr', '.sct', '.tga', '.vda', '.icb', '.vst']
     images = ['.bmp', '.jpg', '.gif', '.png', '.tif', '.pdf', '.svg', '.pic']
 
-    for image in images:
-        if tu in image:
-            status = False
-            break
-
     if status:
+        for image in images:
+            if tu in image:
+                status = False
+                return status
         html = urlopen(tu)
         soup = BeautifulSoup(html, 'lxml')
         for link in soup.findAll('a', attrs={'href': re.compile('^http')}):
@@ -154,17 +157,18 @@ def getLink(tu, visited):
 
 def runMultithread(tu):
 
-    threadingnum = 0
+    global maxthreads
+    threadsnum = 0
 
     if len(df) == 0:
         getLink(tu, 0)
 
     threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
     for thread in threads:
-        threadingnum = threading.active_count()
-        while threadingnum > 15:
+        threadsnum = threading.active_count()
+        while threadsnum > maxthreads:
             time.sleep(0.5)
-            threadingnum = threading.active_count()
+            threadsnum = threading.active_count()
             print ('+ Waiting 0.5 seconds to prevent threading overflow.')
         try:
             thread.start()
