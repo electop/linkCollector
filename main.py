@@ -112,8 +112,8 @@ def getLink(tu, visited):
 
     count = 0
     status = getCode(tu)
-    #images = ['.bmp', '.rle', '.jpg', '.gif', '.png', '.psd', '.pdd', '.tif', '.pdf', '.raw', '.ai', '.eps', '.svg', '.iff', '.fpx', '.frm', '.pcx', '.pct', '.pic', '.pxr', '.sct', '.tga', '.vda', '.icb', '.vst']
-    images = ['.bmp', '.jpg', '.gif', '.png', '.tif', '.pdf', '.svg', '.pic']
+    #images = ['.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic', '.rle', '.psd', '.pdd', '.raw', '.ai', '.eps', '.iff', '.fpx', '.frm', '.pcx', '.pct', '.pxr', '.sct', '.tga', '.vda', '.icb', '.vst']
+    images = ['.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic']
 
     if status:
         for image in images:
