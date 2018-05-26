@@ -56,25 +56,10 @@ def checkTail(str):
     else:
         return str
 
-def indicator(counts):
-
-    global start, num
-
-    end = time.time()
-    cs = end - start
-    cm = cs // 60
-    cs = "{0:.1f}".format(cs % 60)
-    if counts == 1:
-        print ('+ Searching target URL: %d(min) %s(sec)' %(cm, cs))
-    else:
-        sv = "{0:.1f}".format((counts * 100) / num) + '%'
-        print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, counts, num, cm, cs))
-
-    return True
-
 def getCode(tu):
 
     global rdf		# rdf: data frame for final result
+    global start, num
     code = ''
     status = False
 
@@ -92,7 +77,17 @@ def getCode(tu):
     rows = [tu, code]
     rdf.loc[len(rdf)] = rows
     counts = len(rdf)
-    indicator(counts)
+
+    end = time.time()
+    cs = end - start
+    cm = cs // 60
+    cs = "{0:.1f}".format(cs % 60)
+
+    if counts == 1:
+        print ('+ Searching target URL: %d(min) %s(sec)' %(cm, cs))
+    else:
+        sv = "{0:.1f}".format((counts * 100) / num) + '%'
+        print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, counts, num, cm, cs))
 
     return status
 
@@ -101,15 +96,20 @@ def getLink(tu, visited):
     global df	# df: data frame
     global maxnum, num	# maxnum: maximum # of data frame
 
-    if visited == 1:
+    if visited:
         #print ('[OK] It\'s already visited to the URL below and skip.\n%s\n' %tu)
         return False
-    elif getCode(tu):
-        if len(df.loc[df['link'] == tu]) > 0:
-            df.loc[df['link'] == tu, 'visited'] = 1
-        else:
-            rows = [tu, 1]
-            df.loc[len(df)] = rows
+
+    if len(df.loc[df['link'] == tu]) > 0:
+        df.loc[df['link'] == tu, 'visited'] = True
+    else:
+        rows = [tu, True]
+        df.loc[len(df)] = rows
+
+    count = 0
+    status = getCode(tu)
+
+    if status:
         html = urlopen(tu)
         soup = BeautifulSoup(html, 'lxml')
         for link in soup.findAll('a', attrs={'href': re.compile('^http')}):
@@ -118,7 +118,7 @@ def getLink(tu, visited):
             if nl.find(cu) > 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
-                    rows = [nl, 0]
+                    rows = [nl, False]
                     df.loc[len(df)] = rows
                     #print ('+ Adding rows:\n', rows)
         for link in soup.findAll('a', attrs={'href': re.compile('^/')}):
@@ -131,18 +131,19 @@ def getLink(tu, visited):
             if nl.find(cu) > 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
-                    rows = [nl, 0]
+                    rows = [nl, False]
                     df.loc[len(df)] = rows
                     #print ('+ Adding rows:\n', rows)
         #df.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
         #df.drop_duplicates(subset='link', inplace=True, keep='first')
         #df.index = range(len(df))
-        num = len(df)
-        return True
-    else:
-        df.loc[df['link'] == tu, 'visited'] = 1
+        count = len(df)
+        #print ('num, count: %d, %d' %(num, count))
+        if num < count:
+            print ('+ updating the total number of links from %d to %d' %(num, count))
+            num = count
 
-    return False
+    return status
 
 def runMultithread(tu):
 
