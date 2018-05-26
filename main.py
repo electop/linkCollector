@@ -108,8 +108,15 @@ def getLink(tu, visited):
 
     count = 0
     status = getCode(tu)
+    #images = ['.bmp', '.rle', '.jpg', '.gif', '.png', '.psd', '.pdd', '.tif', '.pdf', '.raw', '.ai', '.eps', '.svg', '.iff', '.fpx', '.frm', '.pcx', '.pct', '.pic', '.pxr', '.sct', '.tga', '.vda', '.icb', '.vst']
+    images = ['.bmp', '.jpg', '.gif', '.png', '.tif', '.pdf', '.svg', '.pic']
 
-    if status and (tu.find('.png') < 0 or tu.find('jpeg') < 0 or tu.find('jpg') < 0):
+    for image in images:
+        if tu in image:
+            status = False
+            break
+
+    if status:
         html = urlopen(tu)
         soup = BeautifulSoup(html, 'lxml')
         for link in soup.findAll('a', attrs={'href': re.compile('^http')}):
@@ -164,7 +171,10 @@ def runMultithread(tu):
         except:
             print ('[ERR] Caught an exception of "thread.start()".')
     for thread in threads:
-        thread.join()
+        try:
+            thread.join()
+        except:
+            print ('[ERR] Caught an exception of "thread.join()".')
 
 def result(tu):
 
