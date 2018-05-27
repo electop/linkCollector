@@ -1,3 +1,5 @@
+__author__ = 'electopx@gmail.com'
+
 import re
 import sys
 import time
@@ -12,8 +14,8 @@ start = time.time()
 num, maxnum = 0, 0
 maxthreadsnum = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
 cu, du, url, prefix, path = '', '', '', '', ''
-df = DataFrame(columns=('link', 'visited'))
 rdf = DataFrame(columns=('link', 'code'))
+df = DataFrame(columns=('link', 'visited'))
 
 def init():
 
@@ -99,6 +101,7 @@ def getLink(tu, visited):
 
     global df	# df: data frame
     global maxnum, num	# maxnum: maximum # of data frame
+    excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
 
     if visited:
         #print ('[OK] It\'s already visited to the URL below and skip.\n%s\n' %tu)
@@ -112,14 +115,12 @@ def getLink(tu, visited):
         df.loc[len(df)] = rows
 
     status = getCode(tu)
-    excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
-
     if status == False:
         return False
 
     tokens = tu.split('/')
     lasttoken = tokens[len(tokens) - 1]
-    if lasttoken.find('#') > 0 or lasttoken.find('?') > 0 or lasttoken.find('%') > 0 or excludedfiles.find(lasttoken[len(lasttoken) - 4:]) > 0:
+    if lasttoken.find('#') > 0 or lasttoken.find('?') > 0 or lasttoken.find('%') > 0 or excludedfiles.find(lasttoken[-4:]) > 0:
         print ('+ This "%s" is skipped because it`s not the target of the getLink().' %lasttoken)
         return False
     else:
@@ -179,9 +180,9 @@ def runMultithread(tu):
 
 def result(tu, cm, cs):
 
-    global df, path, num
+    global rdf, df, path, num
 
-    #rdf.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
+    #rdf.sort_values(by=['code', 'link'], ascending=[False, True], inplace=True)
     rdf.sort_values(by='link', ascending=True, inplace=True)
     rdf.drop_duplicates(subset='link', inplace=True, keep='first')
     rdf.index = range(len(rdf))
@@ -190,8 +191,8 @@ def result(tu, cm, cs):
     print ('+ updating the total number of links from %d to %d' %(count, num))
 
     print ('[OK] Result')
-    print (rdf)
-    #print (df)
+    print (rdf.to_string())
+    #print (df.to_string())
 
     target = tu.replace('://','_').replace('/','_')
     path = datetime.now().strftime('%Y-%m-%d_%H-%M_')
