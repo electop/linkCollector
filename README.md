@@ -7,8 +7,10 @@
   * time
   * threading
   * bs4
-  ``` sudo apt-get install python-bs4
-  sudo apt-get install python3-bs4 ```
+  ```
+  sudo apt-get install python-bs4
+  sudo apt-get install python3-bs4
+  ```
   * urllib.request, urllib.error
   * pandas
 2. How to use
