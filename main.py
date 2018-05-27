@@ -91,7 +91,7 @@ def getCode(tu):
         print ('+ Searching target URL: %d(min) %s(sec)' %(cm, cs))
     else:
         sv = "{0:.1f}".format((counts * 100) / num) + '%'
-        print ('+ Searching %s(%d/%d): %d(min) %s(sec)' %(sv, counts, num, cm, cs))
+        print ('+ Searching %s(%d/%d, %d): %d(min) %s(sec)' %(sv, counts, num, maxnum, cm, cs))
 
     return status
 
@@ -107,10 +107,10 @@ def getLink(tu, visited):
     if len(df.loc[df['link'] == tu]) > 0:
         df.loc[df['link'] == tu, 'visited'] = True
     else:
+        num = num + 1
         rows = [tu, True]
         df.loc[len(df)] = rows
 
-    count = 0
     status = getCode(tu)
     #excludedfiles = ['.ico', '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic', '.rle', '.psd', '.pdd', '.raw', '.ai', '.eps', '.iff', '.fpx', '.frm', '.pcx', '.pct', '.pxr', '.sct', '.tga', '.vda', '.icb', '.vst']
     excludedfiles = ['.ico', '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic']
@@ -128,6 +128,7 @@ def getLink(tu, visited):
             if nl.find(cu) > 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
+                    num = num + 1
                     rows = [nl, False]
                     df.loc[len(df)] = rows
                     #print ('+ Adding rows:\n', rows)
@@ -141,17 +142,13 @@ def getLink(tu, visited):
             if nl.find(cu) > 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
+                    num = num + 1
                     rows = [nl, False]
                     df.loc[len(df)] = rows
                     #print ('+ Adding rows:\n', rows)
         #df.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
         #df.drop_duplicates(subset='link', inplace=True, keep='first')
         #df.index = range(len(df))
-        count = len(df)
-        #print ('num, count: %d, %d' %(num, count))
-        if num < count:
-            print ('+ updating the total number of links from %d to %d' %(num, count))
-            num = count
 
     return status
 
@@ -182,11 +179,15 @@ def runMultithread(tu):
 
 def result(tu, cm, cs):
 
-    global df, path
+    global df, path, num
 
     rdf.sort_values(by='link', ascending=True, inplace=True)
     rdf.drop_duplicates(subset='link', inplace=True, keep='first')
     rdf.index = range(len(rdf))
+    count = num
+    num = len(rdf)
+    print ('+ updating the total number of links from %d to %d' %(count, num))
+
     print ('[OK] Result')
     print (rdf)
     target = tu.replace('://','_').replace('/','_')
