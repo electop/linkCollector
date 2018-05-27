@@ -148,7 +148,7 @@ def getLink(tu, visited):
                     num = num + 1
                     rows = [nl, False]
                     df.loc[len(df)] = rows
-                    print ('+ Adding rows(%d):\n%s'%(num, rows))
+                    print ('+ Adding rows(%d):\n%s' %(num, rows))
         return True
 
 def runMultithread(tu):
