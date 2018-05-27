@@ -129,7 +129,7 @@ def getLink(tu, visited):
         for link in soup.findAll('a', attrs={'href': re.compile('^http')}):
             nl = link.get('href')	# nl: new link
             nl = checkTail(nl)
-            if nl.find(cu) > 0 and nl != tu:
+            if nl.find(cu) >= 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
                     num = num + 1
@@ -138,12 +138,12 @@ def getLink(tu, visited):
                     print ('+ Adding rows(%d):\n%s'%(num, rows))
         for link in soup.findAll('a', attrs={'href': re.compile('^/')}):
             nl = link.get('href')
-            if nl.find('//') != 0:
+            if nl.find('//') < 0:
                 nl = prefix + du + nl
             else:
                 nl = prefix.replace('//', '') + nl
             nl = checkTail(nl)
-            if nl.find(cu) > 0 and nl != tu:
+            if nl.find(cu) >= 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
                     num = num + 1
