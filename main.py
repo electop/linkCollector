@@ -9,7 +9,7 @@ from pandas import Series, DataFrame
 from urllib.error import URLError, HTTPError
 
 start = time.time()
-num, maxnum = 1, 0
+num, maxnum = 0, 0
 maxthreadsnum = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
 cu, du, url, prefix, path = '', '', '', '', ''
 df = DataFrame(columns=('link', 'visited'))
@@ -76,7 +76,7 @@ def getCode(tu):
         print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s' %tu)
     except URLError as e:
         code = e.reason
-        print('\n[ERR] URL ERror: We failed to reach\n%s\n+ %s' %(tu, code))
+        print('\n[ERR] URL ERror: We failed to reach in\n%s\n+ %s' %(tu, code))
 
     rows = [tu, code]
     rdf.loc[len(rdf)] = rows
@@ -112,14 +112,17 @@ def getLink(tu, visited):
         df.loc[len(df)] = rows
 
     status = getCode(tu)
-    #excludedfiles = ['.ico', '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic', '.rle', '.psd', '.pdd', '.raw', '.ai', '.eps', '.iff', '.fpx', '.frm', '.pcx', '.pct', '.pxr', '.sct', '.tga', '.vda', '.icb', '.vst']
-    excludedfiles = ['.ico', '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic']
+    excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
 
-    if status:
-        for excludedfile in excludedfiles:
-            if tu in excludedfile:
-                status = False
-                return status
+    if status == False:
+        return False
+
+    tokens = tu.split('/')
+    lasttoken = tokens[len(tokens) - 1]
+    if lasttoken.find('#') > 0 or lasttoken.find('?') > 0 or lasttoken.find('%') > 0 or excludedfiles.find(lasttoken[len(lasttoken) - 4:]) > 0:
+        print ('+ This "%s" is skipped because it`s not the target of the getLink().' %lasttoken)
+        return False
+    else:
         html = urlopen(tu)
         soup = BeautifulSoup(html, 'lxml')
         for link in soup.findAll('a', attrs={'href': re.compile('^http')}):
@@ -131,7 +134,7 @@ def getLink(tu, visited):
                     num = num + 1
                     rows = [nl, False]
                     df.loc[len(df)] = rows
-                    #print ('+ Adding rows:\n', rows)
+                    print ('+ Adding rows(%d):\n%s'%(num, rows))
         for link in soup.findAll('a', attrs={'href': re.compile('^/')}):
             nl = link.get('href')
             if nl.find('//') != 0:
@@ -145,12 +148,8 @@ def getLink(tu, visited):
                     num = num + 1
                     rows = [nl, False]
                     df.loc[len(df)] = rows
-                    #print ('+ Adding rows:\n', rows)
-        #df.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
-        #df.drop_duplicates(subset='link', inplace=True, keep='first')
-        #df.index = range(len(df))
-
-    return status
+                    print ('+ Adding rows(%d):\n%s'%(num, rows))
+        return True
 
 def runMultithread(tu):
 
@@ -158,7 +157,8 @@ def runMultithread(tu):
     threadsnum = 0
 
     if len(df) == 0:
-        getLink(tu, 0)
+        getLink(tu, False)
+        print ('First running with getLink()')
 
     threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
     for thread in threads:
@@ -181,6 +181,7 @@ def result(tu, cm, cs):
 
     global df, path, num
 
+    #rdf.sort_values(by=['visited', 'link'], ascending=[False, True], inplace=True)
     rdf.sort_values(by='link', ascending=True, inplace=True)
     rdf.drop_duplicates(subset='link', inplace=True, keep='first')
     rdf.index = range(len(rdf))
@@ -190,10 +191,13 @@ def result(tu, cm, cs):
 
     print ('[OK] Result')
     print (rdf)
+    #print (df)
+
     target = tu.replace('://','_').replace('/','_')
     path = datetime.now().strftime('%Y-%m-%d_%H-%M_')
     path = path + '_' + cm + '(min)' + cs + '(sec)_' + target + '.csv'
     rdf.to_csv(path, header=True, index=True)
+    #df.to_csv('df_' + path, header=True, index=True)
 
     return len(rdf)
 
