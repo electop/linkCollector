@@ -10,9 +10,14 @@
   ```
   sudo apt-get install python-bs4
   sudo apt-get install python3-bs4
+  pip3 install beautifulsoup4
   ```
   * urllib.request, urllib.error
-  * pandas
+  ```
+  pip install urllib3
+  pip3 install urllib3
+  ```
+  * pandas: https://pandas.pydata.org/pandas-docs/stable/install.html
 2. How to use
 * e.g.: python main.py -t https://developer.tizen.org -m 20
 * argument 1(-t or -T): Target URL
