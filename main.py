@@ -100,7 +100,7 @@ def getCode(tu):
 def getLink(tu, visited):
 
     global df	# df: data frame
-    global maxnum, num	# maxnum: maximum # of data frame
+    global cu, maxnum, num	# maxnum: maximum # of data frame
     excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
 
     if visited:
@@ -132,9 +132,9 @@ def getLink(tu, visited):
             if nl.find(cu) >= 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
-                    num = num + 1
                     rows = [nl, False]
-                    df.loc[len(df)] = rows
+                    df.loc[num] = rows
+                    num = num + 1
                     print ('+ Adding rows(%d):\n%s'%(num, rows))
         for link in soup.findAll('a', attrs={'href': re.compile('^/')}):
             nl = link.get('href')
@@ -146,9 +146,9 @@ def getLink(tu, visited):
             if nl.find(cu) >= 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
-                    num = num + 1
                     rows = [nl, False]
-                    df.loc[len(df)] = rows
+                    df.loc[num] = rows
+                    num = num + 1
                     print ('+ Adding rows(%d):\n%s' %(num, rows))
         return True
 
