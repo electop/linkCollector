@@ -180,7 +180,7 @@ def runMultithread(tu):
         except:
             print ('[ERR] Caught an exception of "thread.join()".')
 
-def result(tu):
+def result(tu, cm, cs):
 
     global df, path
 
@@ -190,7 +190,8 @@ def result(tu):
     print ('[OK] Result')
     print (rdf)
     target = tu.replace('://','_').replace('/','_')
-    path = datetime.now().strftime('%Y-%m-%d_%H-%M_') + target + '.csv'
+    path = datetime.now().strftime('%Y-%m-%d_%H-%M_')
+    path = path + '_' + cm + '(min)' + cs + '(sec)_' + target + '.csv'
     rdf.to_csv(path, header=True, index=True)
 
     return len(rdf)
@@ -200,14 +201,14 @@ if __name__ == "__main__":
     if init():
         while len(df) == 0 or len(df.loc[df['visited'] == 0]) > 0:
             runMultithread(url)
-        dnum = result(url)
         end = time.time()
         cs = end - start
-        cm = cs // 60
+        cm = str(int(cs // 60))
         cs = "{0:.1f}".format(cs % 60)
+        dnum = result(url, cm, cs)
         print ('\n[OK] The total number of links is %d.' %maxnum)
         print ('[OK] Mission complete: The number of links excluding duplication is %d.' %dnum)
-        print ('[OK] The total running time is %d(min) %s(sec).' %(cm, cs))
+        print ('[OK] The total running time is %s(min) %s(sec).' %(cm, cs))
         print ('[OK] Please check the result file. (./%s)' %path)
     else:
         print ('[ERR] Initialization faliure')
