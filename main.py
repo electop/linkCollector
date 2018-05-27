@@ -10,14 +10,14 @@ from urllib.error import URLError, HTTPError
 
 start = time.time()
 num, maxnum = 1, 0
-maxthreads = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
+maxthreadsnum = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
 cu, du, url, prefix, path = '', '', '', '', ''
 df = DataFrame(columns=('link', 'visited'))
 rdf = DataFrame(columns=('link', 'code'))
 
 def init():
 
-    global maxthreads
+    global maxthreadsnum
     global cu, du, url, prefix		# cu: current URL, du: domain URL
     args = sys.argv[0:]
     optionLen = len(args)
@@ -32,7 +32,7 @@ def init():
             url = data
         elif args[i].upper() == '-M':	# -M: Maximun number of threads
             data = str(args[i+1])
-            maxthreads = int(data)
+            maxthreadsnum = int(data)
 
     if (url == ''):
         print ('[ERR] Please input required target URL.')
@@ -112,12 +112,12 @@ def getLink(tu, visited):
 
     count = 0
     status = getCode(tu)
-    #images = ['.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic', '.rle', '.psd', '.pdd', '.raw', '.ai', '.eps', '.iff', '.fpx', '.frm', '.pcx', '.pct', '.pxr', '.sct', '.tga', '.vda', '.icb', '.vst']
-    images = ['.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic']
+    #excludedfiles = ['.ico', '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic', '.rle', '.psd', '.pdd', '.raw', '.ai', '.eps', '.iff', '.fpx', '.frm', '.pcx', '.pct', '.pxr', '.sct', '.tga', '.vda', '.icb', '.vst']
+    excludedfiles = ['.ico', '.png', '.jpg', '.jpeg', '.gif', '.pdf', '.bmp', '.tif', '.svg', '.pic']
 
     if status:
-        for image in images:
-            if tu in image:
+        for excludedfile in excludedfiles:
+            if tu in excludedfile:
                 status = False
                 return status
         html = urlopen(tu)
@@ -157,7 +157,7 @@ def getLink(tu, visited):
 
 def runMultithread(tu):
 
-    global maxthreads
+    global maxthreadsnum
     threadsnum = 0
 
     if len(df) == 0:
@@ -166,7 +166,7 @@ def runMultithread(tu):
     threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
     for thread in threads:
         threadsnum = threading.active_count()
-        while threadsnum > maxthreads:
+        while threadsnum > maxthreadsnum:
             time.sleep(0.5)
             threadsnum = threading.active_count()
             print ('+ Waiting 0.5 seconds to prevent threading overflow.')
