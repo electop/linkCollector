@@ -1,7 +1,7 @@
 # LinkCollector
 ---------------------------------------------------
 1. How to use
->* e.g.: python main.py -t https://developer.tizen.org -m 20
+   * e.g.: python main.py -t https://developer.tizen.org -m 20
 * argument 1(-t or -T): Target URL
 * argument 2(-m or -M): Maximun number of threads
 2. Expected value
