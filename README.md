@@ -1,20 +1,18 @@
 # LinkCollector
 ---------------------------------------------------
 1. Prerequisites
-* 9 Libraries
-  * re
-  * sys
-  * time
-  * threading
+* 9 Libraries *※ This guidance is based on Python 3.6.*
+  * re: https://docs.python.org/3.6/library/re.html
+  * sys: https://docs.python.org/3/library/sys.html?highlight=sys#module-sys
+  * time: https://docs.python.org/3/library/time.html?highlight=time#module-time
+  * threading: https://docs.python.org/3/library/threading.html?highlight=threading#module-threading
   * bs4
   ```
-  sudo apt-get install python-bs4
   sudo apt-get install python3-bs4
   pip3 install beautifulsoup4
   ```
   * urllib.request, urllib.error
   ```
-  pip install urllib3
   pip3 install urllib3
   ```
   * pandas: https://pandas.pydata.org/pandas-docs/stable/install.html
