@@ -72,7 +72,6 @@ if __name__ == '__main__':
         f = open(logname, 'w')
         df = pd.read_csv(inputname)
         print (df.to_string())
-
         for link in df['link']:
             html = urlopen(link)
             soup = BeautifulSoup(html, 'lxml')
