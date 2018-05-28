@@ -120,7 +120,7 @@ def getLink(tu, visited):
 
     tokens = tu.split('/')
     lasttoken = tokens[len(tokens) - 1]
-    if lasttoken.find('#') > 0 or lasttoken.find('?') > 0 or lasttoken.find('%') > 0 or excludedfiles.find(lasttoken[-4:]) > 0:
+    if lasttoken.find('#') >= 0 or lasttoken.find('?') >= 0 or lasttoken.find('%') >= 0 or excludedfiles.find(lasttoken[-4:]) >= 0:
         print ('+ This "%s" is skipped because it`s not the target of the getLink().' %lasttoken)
         return False
     else:
