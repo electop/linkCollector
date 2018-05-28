@@ -6,7 +6,7 @@ from urllib.request import urlopen
 from pandas import Series, DataFrame
 from enchant.checker import SpellChecker
 
-csvname, logname = '', ''
+inputname, outputname, logname = '', '', ''
 
 def cleanhtml(text):
 
@@ -17,11 +17,7 @@ def cleanhtml(text):
 
 def unescape(text):
 
-    text = text.replace('&amp;', '&')
-    text = text.replace('&quot;', '"')
-    text = text.replace('&apos;', "'")
-    text = text.replace('&lt;', '<')
-    text = text.replace('&gt;', '>')
+    text = text.replace('&amp;', '&').replace('&quot;', '"').replace('&apos;', "'").replace('&lt;', '<').replace('&gt;', '>')
 
     return text
 
@@ -77,10 +73,12 @@ if __name__ == '__main__':
         for link in df['link']:
             html = urlopen(link)
             soup = BeautifulSoup(html, 'lxml')
-            output = output + '\n+ ' + link
+            output = output + '\n* ' + link
+            print ('* %s' %link)
             for text in soup.findAll('p'):
                 text = unescape(" ".join(cleanhtml(str(text)).split()))
-                print (text)
+                output = output + '\n + ' + text
+                print (' + %s' %text)
                 chkr.set_text(text)
                 for err in chkr:
                     if excludedwords.find(str(err.word)) < 0:
