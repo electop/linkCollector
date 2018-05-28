@@ -88,14 +88,17 @@ if __name__ == '__main__':
                         output = output + '\n' + adding
                         rows = [str(err.word), link, -1]
                         result.loc[len(result)] = rows
-
-        result.sort_values(by=['misspelling', 'url'], ascending=[True, True], inplace=True)
-        result.index = range(len(result))
-        print (result.to_string())
         f.write(output)
         f.close()
-
-        result.loc[result['misspelling'] == 'AWS', 'num'] = len(result.loc[result['misspelling'] == 'AWS'])
+        for rowdata in result.values:
+            if rowdata[2] == -1:
+                result.loc[result['misspelling'] == rowdata[0], 'num'] = len(result.loc[result['misspelling'] == rowdata[0]])
+            else:
+                continue
+        result.sort_values(by=['num', 'misspelling', 'url'], ascending=[True, True, True], inplace=True)
+        result.index = range(len(result))
         result.to_csv(outputname, header=True, index=True)
+        print (result.to_string())
+
     else:
         print ('[ERR] Initialization faliure')
