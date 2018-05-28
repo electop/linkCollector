@@ -65,7 +65,7 @@ if __name__ == '__main__':
     count = 0
     text, output = '', ''
     chkr = SpellChecker("en_US")
-    result = DataFrame(columns=('misspelling', 'url', 'num'))
+    result = DataFrame(columns=('misspelling', 'url', 'dcount', 'scount'))
     excludedwords = 'www,href,http,https,html,br'
 
     if init():
@@ -89,16 +89,16 @@ if __name__ == '__main__':
                         adding = '[ERR] (' + str(count) + ') ' + str(err.word)
                         print ('%s' %adding)
                         output = output + '\n' + adding
-                        rows = [str(err.word), link, -1]
+                        rows = [str(err.word), link, -1, -1]
                         result.loc[len(result)] = rows
         f.write(output)
         f.close()
         for rowdata in result.values:
             if rowdata[2] == -1:
-                result.loc[result['misspelling'] == rowdata[0], 'num'] = len(result.loc[result['misspelling'] == rowdata[0]])
+                result.loc[result['misspelling'] == rowdata[0], 'dcount'] = len(result.loc[result['misspelling'] == rowdata[0]])
             else:
                 continue
-        result.sort_values(by=['num', 'misspelling', 'url'], ascending=[True, True, True], inplace=True)
+        result.sort_values(by=['dcount', 'misspelling', 'url'], ascending=[True, True, True], inplace=True)
         result.index = range(len(result))
         result.to_csv(outputname, header=True, index=True)
         print (result.to_string())
