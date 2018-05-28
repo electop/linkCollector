@@ -1,3 +1,5 @@
+__author__ = 'electopx@gmail.com'
+
 import re
 import sys
 import pandas as pd
@@ -31,6 +33,7 @@ def init():
         print ('[ERR] There is no option.')
         return False
 
+    # e.g.: python mt.py -i input.csv -o output.csv -l misspelling.log
     for i in range(optionLen-1):
         if args[i].upper() == '-I':	# -I: input file name
             data = str(args[i+1])
