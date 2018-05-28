@@ -1,7 +1,8 @@
 # LinkCollector
 ---------------------------------------------------
+*※ This guidance is based on Python 3.6.*
 1. Prerequisites
-* 9 Libraries *※ This guidance is based on Python 3.6.*
+* 9 Libraries
   * re: https://docs.python.org/3.6/library/re.html
   * sys: https://docs.python.org/3/library/sys.html?highlight=sys#module-sys
   * time: https://docs.python.org/3/library/time.html?highlight=time#module-time
