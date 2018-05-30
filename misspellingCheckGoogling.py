@@ -93,7 +93,7 @@ if __name__ == '__main__':
     result = DataFrame(columns=('misspelling', 'dcount', 'scount', 'url', 'sentence' ))
     excludedwords = 'www,href,http,https,html,br'
     chrome_options = Options()
-    #chrome_options.add_argument('--headless')
+    chrome_options.add_argument('--headless')
     chrome_options.add_argument('--window-size=1920x1080')
     chrome_options.add_argument('disable-gpu')
     useragent = 'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36'
