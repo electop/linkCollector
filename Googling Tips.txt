@@ -5,6 +5,7 @@
 'src="https://www.youtube.com' site:developer.tizen.org -forums
 filetype:html site:developer.tizen.org
 link:developer.tizen.org site:stackoverflow.com
+link:smartthings site:stackoverflow.com
 
 [Reference]
 https://silveryflow.blog.me/120127644161
