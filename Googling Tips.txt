@@ -1,5 +1,10 @@
+[e.g.]
 "certficate" site:developer.tizen.org
 "hlleo" -youtube.com
 'src="https://www.youtube.com' site:developer.tizen.org -forums
 'src="https://www.youtube.com' site:developer.tizen.org -forums
 filetype:html site:developer.tizen.org
+link:developer.tizen.org site:stackoverflow.com
+
+[Reference]
+https://silveryflow.blog.me/120127644161
