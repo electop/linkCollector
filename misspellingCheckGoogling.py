@@ -2,6 +2,7 @@ __author__ = 'electopx@gmail.com'
 
 import re
 import sys
+import time
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -43,7 +44,7 @@ def getCode(tu):
         print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s' %tu)
     except URLError as e:
         code = e.reason
-        print('\n[ERR] URL ERror: We failed to reach in\n%s\n+ %s' %(tu, code))
+        print('\n[ERR] URL ERror: We failed to reach in\n%s\n + %s' %(tu, code))
 
     return status
 
@@ -92,7 +93,7 @@ if __name__ == '__main__':
     result = DataFrame(columns=('misspelling', 'dcount', 'scount', 'url', 'sentence' ))
     excludedwords = 'www,href,http,https,html,br'
     chrome_options = Options()
-    chrome_options.add_argument('--headless')
+    #chrome_options.add_argument('--headless')
     chrome_options.add_argument('--window-size=1920x1080')
     chrome_options.add_argument('disable-gpu')
     useragent = 'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36'
@@ -109,11 +110,11 @@ if __name__ == '__main__':
             tokens = link.split('/')
             lasttoken = tokens[len(tokens) - 1]
             if lasttoken.find('#') >= 0 or lasttoken.find('?') >= 0 or lasttoken.find('%') >= 0 or excludedfiles.find(lasttoken[-4:]) >= 0:
+
                 continue
             html = urlopen(link)
             soup = BeautifulSoup(html, 'lxml')
             output = output + '\n* ' + link
-            print ('* %s' %link)
             for text in soup.findAll('p'):
                 text = unescape(" ".join(cleanhtml(str(text)).split()))
                 if len(text) == 0:
@@ -123,7 +124,8 @@ if __name__ == '__main__':
                 if text[len(text) - 1] != '"':
                     text = text + '"'
                 output = output + '\n + ' + text
-                print (' + %s' %text)
+                print ('\n + Link: %s' %link)
+                print (' + Content: %s' %text)
                 chkr.set_text(text)
                 for err in chkr:
                     if excludedwords.find(str(err.word)) < 0:
@@ -143,12 +145,13 @@ if __name__ == '__main__':
             else:
                 continue
         # Getting values from Googling
+        print ('\n[OK] Getting the number of results searched by Googling')
         for rowdata in result.values:
             if rowdata[2] == -1 and rowdata[1] < 3:
                 browser = webdriver.Chrome(chrome_options=chrome_options)
                 browser.implicitly_wait(3)
                 browser.get('https://google.com')
-                word = '"' + rowdata[0] + '"' + Keys.RETURN
+                word = '"' + rowdata[0] + '" site:https://en.wikipedia.org/wiki/' + Keys.RETURN
                 browser.find_element_by_id('lst-ib').send_keys(word)
                 try:
                     element = browser.find_element_by_xpath('//*[@id="resultStats"]')
@@ -156,12 +159,13 @@ if __name__ == '__main__':
                     searchedcount = elementtokens[2][:-1]
                     result.loc[result['misspelling'] == rowdata[0], 'scount'] = float(searchedcount.replace(',', ''))
                     print (' + %s: About %s results' %(rowdata[0], searchedcount))
+                    browser.quit()
                 except:
                     searchedcount = '0'
                     result.loc[result['misspelling'] == rowdata[0], 'scount'] = float(searchedcount.replace(',', ''))
                     print (' + %s: %s result' %(rowdata[0], searchedcount))
-#                    continue
-                browser.quit()
+                    browser.quit()
+                    continue
         # Sorting result values
         result.sort_values(by=['dcount', 'scount', 'misspelling', 'url'], ascending=[True, True, True, True], inplace=True)
         result.index = range(len(result))
