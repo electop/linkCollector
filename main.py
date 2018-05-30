@@ -101,7 +101,7 @@ def getLink(tu, visited):
 
     global df	# df: data frame
     global cu, maxnum, num	# maxnum: maximum # of data frame
-    excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
+    excludedfiles = '.zip.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
 
     if visited:
         #print ('[OK] It\'s already visited to the URL below and skip.\n%s\n' %tu)
