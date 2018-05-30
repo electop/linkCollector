@@ -133,7 +133,7 @@ if __name__ == '__main__':
                         adding = '[ERR] (' + str(count) + ') ' + str(err.word)
                         print ('%s' %adding)
                         output = output + '\n' + adding
-                        rows = [str(err.word), -1, False, '', link, text]
+                        rows = [str(err.word), -1, -1, '', link, text]
                         result.loc[len(result)] = rows
         f.write(output)
         f.close()
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         browser.get('https://en.wikipedia.org/wiki/Main_Page')
         for rowdata in result.values:
             time.sleep(0.2)
-            if rowdata[1] < 3 and rowdata[3] == '':	# rowdata[2]: wiki 
+            if rowdata[1] < 3 and rowdata[2] == -1:	# rowdata[2]: wiki 
                 word = rowdata[0] + Keys.RETURN
                 browser.find_element_by_id('searchInput').send_keys(word)
                 html = browser.page_source
