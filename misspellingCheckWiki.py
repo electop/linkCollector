@@ -37,11 +37,11 @@ def getCode(tu):
 
     try:
         code = str(urlopen(tu).getcode())
-        print('\n[OK] The server could fulfill the request to\n%s' %tu)
+        print('\n[OK] The server could fulfill the request to\n + %s' %tu)
         status = True
     except HTTPError as e:
         code = str(e.code)
-        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s' %tu)
+        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n + %s' %tu)
     except URLError as e:
         code = e.reason
         print('\n[ERR] URL ERror: We failed to reach in\n%s\n + %s' %(tu, code))
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     count = 0
     text, output = '', ''
     chkr = SpellChecker("en_US")
-    result = DataFrame(columns=('misspelling', 'dcount', 'scount', 'url', 'sentence' ))
+    result = DataFrame(columns=('misspelling', 'duplication', 'wiki', 'wikiurl', 'url', 'sentence' ))
     excludedwords = 'www,href,http,https,html,br'
     chrome_options = Options()
     chrome_options.add_argument('--headless')
@@ -133,41 +133,42 @@ if __name__ == '__main__':
                         adding = '[ERR] (' + str(count) + ') ' + str(err.word)
                         print ('%s' %adding)
                         output = output + '\n' + adding
-                        rows = [str(err.word), -1, -1, link, text]
+                        rows = [str(err.word), -1, False, '', link, text]
                         result.loc[len(result)] = rows
         f.write(output)
         f.close()
         # Counting for duplicated misspellings
         for rowdata in result.values:
-            if rowdata[1] == -1:
+            if rowdata[1] == -1:	# rowdata[1]: duplication
                 duplicatedcount = len(result.loc[result['misspelling'] == rowdata[0]])
-                result.loc[result['misspelling'] == rowdata[0], 'dcount'] = duplicatedcount
+                result.loc[result['misspelling'] == rowdata[0], 'duplication'] = duplicatedcount
             else:
                 continue
-        # Getting values from Googling
-        print ('\n[OK] Getting the number of results searched by Googling')
+        # Getting values from Wikipedia
+        print ('\n + Finding words misspelled on Wikipedia')
+        browser = webdriver.Chrome(chrome_options=chrome_options)
+        browser.implicitly_wait(3)
+        browser.get('https://en.wikipedia.org/wiki/Main_Page')
         for rowdata in result.values:
-            if rowdata[2] == -1 and rowdata[1] < 3:
-                browser = webdriver.Chrome(chrome_options=chrome_options)
-                browser.implicitly_wait(3)
-                browser.get('https://google.com')
-                word = '"' + rowdata[0] + '" site:https://en.wikipedia.org/wiki/' + Keys.RETURN
-                browser.find_element_by_id('lst-ib').send_keys(word)
-                try:
-                    element = browser.find_element_by_xpath('//*[@id="resultStats"]')
-                    elementtokens = element.text.split(' ')
-                    searchedcount = elementtokens[2][:-1]
-                    result.loc[result['misspelling'] == rowdata[0], 'scount'] = float(searchedcount.replace(',', ''))
-                    print (' + %s: About %s results' %(rowdata[0], searchedcount))
-                    browser.quit()
-                except:
-                    searchedcount = '0'
-                    result.loc[result['misspelling'] == rowdata[0], 'scount'] = float(searchedcount.replace(',', ''))
-                    print (' + %s: %s result' %(rowdata[0], searchedcount))
-                    browser.quit()
-                    continue
+            time.sleep(0.2)
+            if rowdata[1] < 3 and rowdata[3] == '':	# rowdata[2]: wiki 
+                word = rowdata[0] + Keys.RETURN
+                browser.find_element_by_id('searchInput').send_keys(word)
+                html = browser.page_source
+                soup = BeautifulSoup(html, 'html.parser')
+                if len(soup.findAll('a', attrs={'href': re.compile('/wiki/Wikipedia:Articles_for_creation')})) > 0:
+                    result.loc[result['misspelling'] == rowdata[0], 'wiki'] = False
+                    result.loc[result['misspelling'] == rowdata[0], 'wikiurl'] = browser.current_url
+                    print ('[ERR] %s: Not found' %(rowdata[0]))
+                    print (' + Link: %s' %browser.current_url)
+                else:
+                    result.loc[result['misspelling'] == rowdata[0], 'wiki'] = True
+                    result.loc[result['misspelling'] == rowdata[0], 'wikiurl'] = browser.current_url
+                    print ('[OK] %s: Found' %(rowdata[0]))
+                    print (' + Link: %s' %browser.current_url)
+        browser.quit()
         # Sorting result values
-        result.sort_values(by=['dcount', 'scount', 'misspelling', 'url'], ascending=[True, True, True, True], inplace=True)
+        result.sort_values(by=['duplication', 'wiki', 'misspelling', 'url'], ascending=[True, True, True, True], inplace=True)
         result.index = range(len(result))
         # Exporting to csv file
         result.to_csv(outputname, header=True, index=True)
