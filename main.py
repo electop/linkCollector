@@ -3,16 +3,16 @@ __author__ = 'electopx@gmail.com'
 import re
 import sys
 import time
+import argparse
 import threading
+import http.client
 from bs4 import BeautifulSoup
 from datetime import datetime
+from urllib.parse import urlparse
 from urllib.request import urlopen
 from urllib.request import Request
-from urllib.parse import urlparse
 from pandas import Series, DataFrame
 from urllib.error import URLError, HTTPError
-import argparse
-import http.client
 
 http.client.HTTPConnection._http_vsn = 10
 http.client.HTTPConnection._http_vsn_str = 'HTTP/1.0'
@@ -20,7 +20,6 @@ http.client.HTTPConnection._http_vsn_str = 'HTTP/1.0'
 start = time.time()
 num, maxnum = 0, 0
 maxthreadsnum = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
-maxDepth = 2
 cu, du, url, prefix, path = '', '', '', '', ''
 rdf = DataFrame(columns=('parent', 'link', 'code'))
 df = DataFrame(columns=('parent', 'link', 'visited'))
@@ -99,7 +98,7 @@ def getCode(tu):
 
 def getLink(tu, visited):
     global df	# df: data frame
-    global cu, maxnum, num, maxDepth	# maxnum: maximum # of data frame
+    global cu, maxnum, num	# maxnum: maximum number of data frame
     excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
 
     if visited:
