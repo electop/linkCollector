@@ -23,7 +23,7 @@ maxthreadsnum = 15	# If the performance of your PC is low, please adjust this va
 maxDepth = 2
 cu, du, url, prefix, path = '', '', '', '', ''
 rdf = DataFrame(columns=('parent', 'link', 'code'))
-df = DataFrame(columns=('parent', 'link', 'visited', 'depth'))
+df = DataFrame(columns=('parent', 'link', 'visited'))
 userAgentString = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
 
 def init():
