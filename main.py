@@ -176,8 +176,8 @@ def result(tu, cm, cs):
 
     global rdf, df, path, num
 
-    rdf.sort_values(by='link', ascending=True, inplace=True)
-    rdf.drop_duplicates(subset='link', inplace=True, keep='first')
+    rdf.sort_values(by=['link', 'parent'], ascending=[True, True], inplace=True)
+    rdf.drop_duplicates(subset=['link', 'parent'], inplace=True, keep='first')
     rdf.index = range(len(rdf))
     count = num
     num = len(rdf)
