@@ -22,8 +22,8 @@ num, maxnum = 0, 0
 maxthreadsnum = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
 maxDepth = 2
 cu, du, url, prefix, path = '', '', '', '', ''
-rdf = DataFrame(columns=('link', 'code'))
-df = DataFrame(columns=('link', 'visited'))
+rdf = DataFrame(columns=('parent', 'link', 'code'))
+df = DataFrame(columns=('parent', 'link', 'visited'))
 userAgentString = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
 
 def init():
@@ -80,7 +80,8 @@ def getCode(tu):
         code = e.reason
         print('\n[ERR] URL ERror: We failed to reach in\n%s\n+ %s' %(tu, code))
 
-    rows = {'link': tu, 'code': code}
+    parent = df.loc[df['link']==tu, 'parent'].item()
+    rows = {'parent':parent, 'link': tu, 'code': code}
     rdf = rdf.append(rows, ignore_index=True)
     counts = len(rdf)
 
@@ -139,7 +140,7 @@ def getLink(tu, visited):
             if nl.find(cu) >= 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
-                    rows = {'link':nl, 'visited':False}
+                    rows = {'parent':tu, 'link':nl, 'visited':False}
                     df = df.append(rows, ignore_index=True)
                     num = num + 1
                     print ('+ Adding rows(%d):\n%s'%(num, rows))
