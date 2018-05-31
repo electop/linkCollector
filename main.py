@@ -7,70 +7,70 @@ import threading
 from bs4 import BeautifulSoup
 from datetime import datetime
 from urllib.request import urlopen
+from urllib.request import Request
+from urllib.parse import urlparse
 from pandas import Series, DataFrame
 from urllib.error import URLError, HTTPError
+import argparse
+import http.client
+
+http.client.HTTPConnection._http_vsn = 10
+http.client.HTTPConnection._http_vsn_str = 'HTTP/1.0'
 
 start = time.time()
 num, maxnum = 0, 0
 maxthreadsnum = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
+maxDepth = 2
 cu, du, url, prefix, path = '', '', '', '', ''
-rdf = DataFrame(columns=('link', 'code'))
-df = DataFrame(columns=('link', 'visited'))
+rdf = DataFrame(columns=('parent', 'link', 'code'))
+df = DataFrame(columns=('parent', 'link', 'visited', 'depth'))
+userAgentString = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
 
 def init():
 
     global maxthreadsnum
     global cu, du, url, prefix		# cu: current URL, du: domain URL
-    args = sys.argv[0:]
-    optionLen = len(args)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-T", "--target-url", help="Target URL to test")
+    parser.add_argument("-M", "--max-thread", type=int, help="Maximum number of threads")
+    args = parser.parse_args()
+    if args.target_url:
+        url = str(args.target_url)
+        up = urlparse(url)
+        if all([up.scheme, up.netloc]) and up.scheme.find('http')>=0:
+            prefix = up.scheme + "://"
+            du = up.netloc
+            cu = du + up.path
 
-    if (len(args) <= 1):
-        print ('[ERR] There is no option.')
-        return False
-
-    for i in range(optionLen-1):
-        if args[i].upper() == '-T':	# -T: Target URL
-            data = str(args[i+1])
-            url = data
-        elif args[i].upper() == '-M':	# -M: Maximun number of threads
-            data = str(args[i+1])
-            maxthreadsnum = int(data)
-
-    if (url == ''):
+        else:
+            print ('[ERR] Please be sure to include "http://" or "https://" in the target URL.')
+            return False
+        
+    else:
         print ('[ERR] Please input required target URL.')
         return False
-    elif url.find('http://') >= 0:
-        prefix = 'http://'
-        cu = url.replace('http://', '')
-    elif url.find('https://') >= 0:
-        prefix = 'https://'
-        cu = url.replace('https://', '')
-    else:
-        print ('[ERR] Please be sure to include "http://" or "https://" in the target URL.')
-        return False
-
-    tokens = url.split('/')
-    du = tokens[2]
+    if args.max_thread:
+        maxthreadsnum = int(args.max_thread)
 
     return True
 
 # Deletion the last '/' of the target URL
 def checkTail(str):
-
-    if str[len(str) - 1] == '/':
-        return str.rstrip('/')
-    else:
-        return str
+    return str.rstrip('/').rstrip()
 
 def getCode(tu):
-
     global rdf		# rdf: data frame for final result
     global start, num
     code = ''
     status = False
+    req = None
+    html = None
 
     try:
-        code = str(urlopen(tu).getcode())
+        req = Request(tu)
+        req.add_header('User-Agent', userAgentString)
+        html = urlopen(req)
+        code = str(html.status)
         print('\n[OK] The server could fulfill the request to\n%s' %tu)
         status = True
     except HTTPError as e:
@@ -80,8 +80,9 @@ def getCode(tu):
         code = e.reason
         print('\n[ERR] URL ERror: We failed to reach in\n%s\n+ %s' %(tu, code))
 
-    rows = [tu, code]
-    rdf.loc[len(rdf)] = rows
+    parent = df.loc[df['link']==tu, 'parent'].item()
+    rows = {'parent':parent, 'link': tu, 'code': code}
+    rdf = rdf.append(rows, ignore_index=True)
     counts = len(rdf)
 
     end = time.time()
@@ -94,14 +95,12 @@ def getCode(tu):
     else:
         sv = "{0:.1f}".format((counts * 100) / num) + '%'
         print ('+ Searching %s(%d/%d, %d): %d(min) %s(sec)' %(sv, counts, num, maxnum, cm, cs))
-
-    return status
+    return (status, html)
 
 def getLink(tu, visited):
-
     global df	# df: data frame
-    global cu, maxnum, num	# maxnum: maximum # of data frame
-    excludedfiles = '.zip.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
+    global cu, maxnum, num, maxDepth	# maxnum: maximum # of data frame
+    excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
 
     if visited:
         #print ('[OK] It\'s already visited to the URL below and skip.\n%s\n' %tu)
@@ -111,45 +110,41 @@ def getLink(tu, visited):
         df.loc[df['link'] == tu, 'visited'] = True
     else:
         num = num + 1
-        rows = [tu, True]
+        rows = ["", tu, True, 0]
         df.loc[len(df)] = rows
 
-    status = getCode(tu)
+    (status, html) = getCode(tu)
     if status == False:
         return False
 
     tokens = tu.split('/')
-    lasttoken = tokens[len(tokens) - 1]
+    lasttoken = tokens[-1]
+
     if lasttoken.find('#') >= 0 or lasttoken.find('?') >= 0 or lasttoken.find('%') >= 0 or excludedfiles.find(lasttoken[-4:]) >= 0:
         print ('+ This "%s" is skipped because it`s not the target of the getLink().' %lasttoken)
         return False
     else:
-        html = urlopen(tu)
-        soup = BeautifulSoup(html, 'lxml')
-        for link in soup.findAll('a', attrs={'href': re.compile('^http')}):
+        try:
+            soup = BeautifulSoup(html.read().decode('utf-8','ignore'), 'lxml')
+        except Exception as e:
+            print('+ %s' %str(e))
+
+        for link in soup.findAll('a', attrs={'href': re.compile('^http|^/')}):
             nl = link.get('href')	# nl: new link
             nl = checkTail(nl)
+            if nl.startswith("/"):
+                if nl.find('//') < 0:
+                    nl = prefix + du + nl
+                else:
+                    nl = prefix.replace('//', '') + nl
             if nl.find(cu) >= 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
-                    rows = [nl, False]
-                    df.loc[num] = rows
+                    rows = {'parent':tu, 'link':nl, 'visited':False}
+                    df = df.append(rows, ignore_index=True)
                     num = num + 1
                     print ('+ Adding rows(%d):\n%s'%(num, rows))
-        for link in soup.findAll('a', attrs={'href': re.compile('^/')}):
-            nl = link.get('href')
-            if nl.find('//') < 0:
-                nl = prefix + du + nl
-            else:
-                nl = prefix.replace('//', '') + nl
-            nl = checkTail(nl)
-            if nl.find(cu) >= 0 and nl != tu:
-                maxnum = maxnum + 1
-                if len(df.loc[df['link'] == nl]) == 0:
-                    rows = [nl, False]
-                    df.loc[num] = rows
-                    num = num + 1
-                    print ('+ Adding rows(%d):\n%s' %(num, rows))
+
         return True
 
 def runMultithread(tu):
@@ -161,7 +156,7 @@ def runMultithread(tu):
         getLink(tu, False)
         print ('First running with getLink()')
 
-    threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
+    threads = [threading.Thread(target=getLink, args=(durl[1], durl[2])) for durl in df.values]
     for thread in threads:
         threadsnum = threading.active_count()
         while threadsnum > maxthreadsnum:
@@ -182,7 +177,6 @@ def result(tu, cm, cs):
 
     global rdf, df, path, num
 
-    #rdf.sort_values(by=['code', 'link'], ascending=[False, True], inplace=True)
     rdf.sort_values(by='link', ascending=True, inplace=True)
     rdf.drop_duplicates(subset='link', inplace=True, keep='first')
     rdf.index = range(len(rdf))
