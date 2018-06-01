@@ -18,11 +18,12 @@ http.client.HTTPConnection._http_vsn = 10
 http.client.HTTPConnection._http_vsn_str = 'HTTP/1.0'
 
 start = time.time()
-num, maxnum = 0, 0
+rnum, dnum, maxnum = 0, 0, 0
 maxthreadsnum = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
+maxDepth = 2
 cu, du, url, prefix, path = '', '', '', '', ''
-rdf = DataFrame(columns=('parent', 'link', 'code'))
-df = DataFrame(columns=('parent', 'link', 'visited'))
+rdf = DataFrame(columns=('link', 'code'))
+df = DataFrame(columns=('link', 'visited'))
 userAgentString = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
 
 def init():
@@ -33,6 +34,7 @@ def init():
     parser.add_argument("-T", "--target-url", help="Target URL to test")
     parser.add_argument("-M", "--max-thread", type=int, help="Maximum number of threads")
     args = parser.parse_args()
+
     if args.target_url:
         url = str(args.target_url)
         up = urlparse(url)
@@ -40,14 +42,13 @@ def init():
             prefix = up.scheme + "://"
             du = up.netloc
             cu = du + up.path
-
         else:
             print ('[ERR] Please be sure to include "http://" or "https://" in the target URL.')
             return False
-        
     else:
         print ('[ERR] Please input required target URL.')
         return False
+
     if args.max_thread:
         maxthreadsnum = int(args.max_thread)
 
@@ -55,11 +56,13 @@ def init():
 
 # Deletion the last '/' of the target URL
 def checkTail(str):
+
     return str.rstrip('/').rstrip()
 
 def getCode(tu):
+
     global rdf		# rdf: data frame for final result
-    global start, num
+    global start, rnum, dnum
     code = ''
     status = False
     req = None
@@ -79,9 +82,11 @@ def getCode(tu):
         code = e.reason
         print('\n[ERR] URL ERror: We failed to reach in\n%s\n+ %s' %(tu, code))
 
-    parent = df.loc[df['link']==tu, 'parent'].item()
-    rows = {'parent':parent, 'link': tu, 'code': code}
-    rdf = rdf.append(rows, ignore_index=True)
+    rows = [tu, code]
+    rdf.loc[rnum] = rows
+    rnum = rnum + 1
+    #rows = {'link':tu, 'code':code}
+    #rdf = rdf.append(rows, ignore_index=True)
     counts = len(rdf)
 
     end = time.time()
@@ -92,13 +97,14 @@ def getCode(tu):
     if counts == 1:
         print ('+ Searching target URL: %d(min) %s(sec)' %(cm, cs))
     else:
-        sv = "{0:.1f}".format((counts * 100) / num) + '%'
-        print ('+ Searching %s(%d/%d, %d): %d(min) %s(sec)' %(sv, counts, num, maxnum, cm, cs))
+        sv = "{0:.1f}".format((counts * 100) / dnum) + '%'
+        print ('+ Searching %s(%d/%d, %d): %d(min) %s(sec)' %(sv, counts, dnum, maxnum, cm, cs))
+
     return (status, html)
 
 def getLink(tu, visited):
     global df	# df: data frame
-    global cu, maxnum, num	# maxnum: maximum number of data frame
+    global cu, maxnum, dnum, maxDepth	# maxnum: maximum # of data frame
     excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
 
     if visited:
@@ -108,11 +114,12 @@ def getLink(tu, visited):
     if len(df.loc[df['link'] == tu]) > 0:
         df.loc[df['link'] == tu, 'visited'] = True
     else:
-        num = num + 1
-        rows = ["", tu, True, 0]
-        df.loc[len(df)] = rows
+        rows = [tu, True]
+        df.loc[dnum] = rows
+        dnum = dnum + 1
 
     (status, html) = getCode(tu)
+
     if status == False:
         return False
 
@@ -126,7 +133,7 @@ def getLink(tu, visited):
         try:
             soup = BeautifulSoup(html.read().decode('utf-8','ignore'), 'lxml')
         except Exception as e:
-            print('+ %s' %str(e))
+            print('+', str(e))
 
         for link in soup.findAll('a', attrs={'href': re.compile('^http|^/')}):
             nl = link.get('href')	# nl: new link
@@ -139,10 +146,12 @@ def getLink(tu, visited):
             if nl.find(cu) >= 0 and nl != tu:
                 maxnum = maxnum + 1
                 if len(df.loc[df['link'] == nl]) == 0:
-                    rows = {'parent':tu, 'link':nl, 'visited':False}
-                    df = df.append(rows, ignore_index=True)
-                    num = num + 1
-                    print ('+ Adding rows(%d):\n%s'%(num, rows))
+                    rows = [nl, False]
+                    df.loc[dnum] = rows
+                    dnum = dnum + 1
+                    #rows = {'parent':tu, 'link':nl, 'visited':False}
+                    #df = df.append(rows, ignore_index=True)
+                    print ('+ Adding rows(%d):\n%s'%(dnum, rows))
 
         return True
 
@@ -155,7 +164,8 @@ def runMultithread(tu):
         getLink(tu, False)
         print ('First running with getLink()')
 
-    threads = [threading.Thread(target=getLink, args=(durl[1], durl[2])) for durl in df.values]
+    threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
+
     for thread in threads:
         threadsnum = threading.active_count()
         while threadsnum > maxthreadsnum:
@@ -166,6 +176,7 @@ def runMultithread(tu):
             thread.start()
         except:
             print ('[ERR] Caught an exception of "thread.start()".')
+
     for thread in threads:
         try:
             thread.join()
@@ -174,14 +185,15 @@ def runMultithread(tu):
 
 def result(tu, cm, cs):
 
-    global rdf, df, path, num
+    global rdf, df, path, dnum
 
-    rdf.sort_values(by=['link', 'parent'], ascending=[True, True], inplace=True)
-    rdf.drop_duplicates(subset=['link', 'parent'], inplace=True, keep='first')
+    rdf.sort_values(by='link', ascending=True, inplace=True)
+    #rdf.sort_values(by=['code', 'link'], ascending=[False, True], inplace=True)
+    rdf.drop_duplicates(subset='link', inplace=True, keep='first')
     rdf.index = range(len(rdf))
-    count = num
-    num = len(rdf)
-    print ('+ updating the total number of links from %d to %d' %(count, num))
+    count = dnum
+    dnum = len(rdf)
+    print ('+ updating the total number of links from %d to %d' %(count, dnum))
 
     print ('[OK] Result')
     print (rdf.to_string())
