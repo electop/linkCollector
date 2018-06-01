@@ -201,7 +201,7 @@ def result(tu, cm, cs):
 
     target = tu.replace('://','_').replace('/','_')
     path = datetime.now().strftime('%Y-%m-%d_%H-%M_')
-    path = path + '_' + cm + '(min)' + cs + '(sec)_' + target + '.csv'
+    path = path + cm + '(min)' + cs + '(sec)_' + target + '.csv'
     rdf.to_csv(path, header=True, index=True)
     #df.to_csv('df_' + path, header=True, index=True)
 
