@@ -6,18 +6,20 @@ import time
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from urllib.request import urlopen
-from pandas import Series, DataFrame
 from enchant import DictWithPWL
+from urllib.request import urlopen
+from urllib.request import Request
+from pandas import Series, DataFrame
 from enchant.checker import SpellChecker
 from urllib.error import URLError, HTTPError
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
 
 inputname, outputname, logname = '', '', ''
-#excludedfiles = '.zip.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
 # The most common file types and file extensions
 excludedfiles = '.aif.cda.mid.mp3.mpa.ogg.wav.wma.wpl.7z.arj.deb.pkg.rar.rpm.tar.z.zip.bin.dmg.iso.toa.vcd.csv.dat.db.log.mdb.sav.sql.tar.xml.apk.bat.bin.cgi.com.exe.gad.jar.py.wsf.fnt.fon.otf.ttf.ai.bmp.gif.ico.jpe.png.ps.psd.svg.tif.asp.cer.cfm.cgi.js.jsp.par.php.py.rss.key.odp.pps.ppt.ppt.c.cla.cpp.cs.h.jav.sh.swi.vb.ods.xlr.xls.xls.bak.cab.cfg.cpl.cur.dll.dmp.drv.icn.ico.ini.lnk.msi.sys.tmp.3g2.3gp.avi.flv.h26.m4v.mkv.mov.mp4.mpg.rm.swf.vob.wmv.doc.odt.pdf.rtf.tex.txt.wks.wpd'
+#useragent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
+useragent = 'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36'
 
 def cleanhtml(text):
 
@@ -34,21 +36,25 @@ def unescape(text):
 
 def getCode(tu):
 
-    code = ''
+    global useragent
+    code, targetpage = '', ''
     status = False
 
     try:
-        code = str(urlopen(tu).getcode())
-        print('\n[OK] The server could fulfill the request to\n + %s' %tu)
+        req = Request(tu)
+        req.add_header('User-Agent', useragent)
+        targetpage = urlopen(req)
+        code = str(targetpage.status)
+        print('\n[OK] The server could fulfill the request to\n%s' %tu)
         status = True
     except HTTPError as e:
         code = str(e.code)
-        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n + %s' %tu)
+        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s\n+ Error Code: %s' %(tu, code))
     except URLError as e:
         code = e.reason
-        print('\n[ERR] URL ERror: We failed to reach in\n%s\n + %s' %(tu, code))
+        print('\n[ERR] URL Error: We failed to reach in\n%s\n+ Error Code: %s' %(tu, code))
 
-    return status
+    return (status, targetpage)
 
 def init():
 
@@ -98,7 +104,6 @@ if __name__ == '__main__':
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--window-size=1920x1080')
     chrome_options.add_argument('disable-gpu')
-    useragent = 'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36'
     chrome_options.add_argument(useragent)
 
     if init():
@@ -106,16 +111,15 @@ if __name__ == '__main__':
         df = pd.read_csv(inputname)
         print (df.to_string())
         for link in df['link']:
-            status = getCode(link)
-            if status == False:
-                continue
             tokens = link.split('/')
             lasttoken = tokens[len(tokens) - 1]
-            if lasttoken.find('#') >= 0 or lasttoken.find('?') >= 0 or lasttoken.find('%') >= 0 or excludedfiles.find(lasttoken[-4:]) >= 0:
-
+            if link.find('?') >= 0 or lasttoken.find('#') >= 0 or lasttoken.find('%') >= 0 or excludedfiles.find(lasttoken[-4:]) >= 0:
                 continue
-            html = urlopen(link)
-            soup = BeautifulSoup(html, 'lxml')
+            (status, page) = getCode(link)
+            if status == False:
+                continue
+            #page = urlopen(link)
+            soup = BeautifulSoup(page, 'lxml')
             output = output + '\n* ' + link
             for text in soup.findAll('p'):
                 text = unescape(" ".join(cleanhtml(str(text)).split()))
@@ -156,8 +160,8 @@ if __name__ == '__main__':
             if rowdata[1] < 3 and rowdata[2] == -1:	# rowdata[2]: wiki 
                 word = rowdata[0] + Keys.RETURN
                 browser.find_element_by_id('searchInput').send_keys(word)
-                html = browser.page_source
-                soup = BeautifulSoup(html, 'html.parser')
+                page = browser.page_source
+                soup = BeautifulSoup(page, 'html.parser')
                 if len(soup.findAll('a', attrs={'href': re.compile('/wiki/Wikipedia:Articles_for_creation')})) > 0:
                     result.loc[result['misspelling'] == rowdata[0], 'wiki'] = False
                     result.loc[result['misspelling'] == rowdata[0], 'wikiurl'] = browser.current_url
