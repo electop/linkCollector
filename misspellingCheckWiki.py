@@ -15,7 +15,7 @@ from urllib.error import URLError, HTTPError
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.options import Options
 
-inputname, outputname, logname = '', '', ''
+inputname, outputname, logname = 'input.csv', 'output.csv', 'output.log'
 # The most common file types and file extensions
 excludedfiles = '.aif.cda.mid.mp3.mpa.ogg.wav.wma.wpl.7z.arj.deb.pkg.rar.rpm.tar.z.zip.bin.dmg.iso.toa.vcd.csv.dat.db.log.mdb.sav.sql.tar.xml.apk.bat.bin.cgi.com.exe.gad.jar.py.wsf.fnt.fon.otf.ttf.ai.bmp.gif.ico.jpe.png.ps.psd.svg.tif.asp.cer.cfm.cgi.js.jsp.par.php.py.rss.key.odp.pps.ppt.ppt.c.cla.cpp.cs.h.jav.sh.swi.vb.ods.xlr.xls.xls.bak.cab.cfg.cpl.cur.dll.dmp.drv.icn.ico.ini.lnk.msi.sys.tmp.3g2.3gp.avi.flv.h26.m4v.mkv.mov.mp4.mpg.rm.swf.vob.wmv.doc.odt.pdf.rtf.tex.txt.wks.wpd'
 #useragent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
@@ -62,10 +62,6 @@ def init():
     args = sys.argv[0:]
     optionLen = len(args)
 
-    if len(args) <= 1:
-        print ('[ERR] There is no option.')
-        return False
-
     # e.g.: python mt.py -i input.csv -o output.csv -l misspelling.log
     for i in range(optionLen-1):
         if args[i].upper() == '-I':	# -I: input file name
@@ -78,17 +74,14 @@ def init():
             data = str(args[i+1])
             logname = data
 
-    if inputname == '' and outputname == '' and logname == '':
-        print ('[ERR] Please enter names for the input, output and log file.')
+    if inputname.find('.csv') < 0:
+        print ('[ERR] Please use ".csv" as the extension of input file')
         return False
-    elif inputname == '' or inputname.find('.csv') < 0:
-        print ('[ERR] Please enter name for the input file and be sure to include ".csv" in input file name.')
+    elif outputname.find('.csv') < 0:
+        print ('[ERR] Please use ".csv" as the extension of output file.')
         return False
-    elif outputname == '' or outputname.find('.csv') < 0:
-        print ('[ERR] Please enter name for the output file and be sure to include ".csv" in output file name.')
-        return False
-    elif logname == '' or logname.find('.log') < 0:
-        print ('[ERR] Please enter name for the log file name and be sure to include ".log" in log file name.')
+    elif logname.find('.log') < 0:
+        print ('[ERR] Please use ".log" as the extension of log file.')
         return False
 
     return True
