@@ -6,16 +6,20 @@ import time
 import pandas as pd
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
-from urllib.request import urlopen
-from pandas import Series, DataFrame
 from enchant import DictWithPWL
+from urllib.request import urlopen
+from urllib.request import Request
+from pandas import Series, DataFrame
 from enchant.checker import SpellChecker
 from urllib.error import URLError, HTTPError
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.options import Options
 
-inputname, outputname, logname = '', '', ''
-excludedfiles = '.zip.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
+inputname, outputname, logname = 'input.csv', 'output.csv', 'output.log'
+# The most common file types and file extensions
+excludedfiles = '.aif.cda.mid.mp3.mpa.ogg.wav.wma.wpl.7z.arj.deb.pkg.rar.rpm.tar.z.zip.bin.dmg.iso.toa.vcd.csv.dat.db.log.mdb.sav.sql.tar.xml.apk.bat.bin.cgi.com.exe.gad.jar.py.wsf.fnt.fon.otf.ttf.ai.bmp.gif.ico.jpe.png.ps.psd.svg.tif.asp.cer.cfm.cgi.js.jsp.par.php.py.rss.key.odp.pps.ppt.ppt.c.cla.cpp.cs.h.jav.sh.swi.vb.ods.xlr.xls.xls.bak.cab.cfg.cpl.cur.dll.dmp.drv.icn.ico.ini.lnk.msi.sys.tmp.3g2.3gp.avi.flv.h26.m4v.mkv.mov.mp4.mpg.rm.swf.vob.wmv.doc.odt.pdf.rtf.tex.txt.wks.wpd'
+#useragent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
+useragent = 'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36'
 
 def cleanhtml(text):
 
@@ -32,31 +36,31 @@ def unescape(text):
 
 def getCode(tu):
 
-    code = ''
+    global useragent
+    code, targetpage = '', ''
     status = False
 
     try:
-        code = str(urlopen(tu).getcode())
+        req = Request(tu)
+        req.add_header('User-Agent', useragent)
+        targetpage = urlopen(req)
+        code = str(targetpage.status)
         print('\n[OK] The server could fulfill the request to\n%s' %tu)
         status = True
     except HTTPError as e:
         code = str(e.code)
-        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s' %tu)
+        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s\n+ Error Code: %s' %(tu, code))
     except URLError as e:
         code = e.reason
-        print('\n[ERR] URL ERror: We failed to reach in\n%s\n + %s' %(tu, code))
+        print('\n[ERR] URL Error: We failed to reach in\n%s\n+ Error Code: %s' %(tu, code))
 
-    return status
+    return (status, targetpage)
 
 def init():
 
     global inputname, outputname, logname
     args = sys.argv[0:]
     optionLen = len(args)
-
-    if len(args) <= 1:
-        print ('[ERR] There is no option.')
-        return False
 
     # e.g.: python mt.py -i input.csv -o output.csv -l misspelling.log
     for i in range(optionLen-1):
@@ -70,17 +74,14 @@ def init():
             data = str(args[i+1])
             logname = data
 
-    if inputname == '' and outputname == '' and logname == '':
-        print ('[ERR] Please enter names for the input, output and log file.')
+    if inputname.find('.csv') < 0:
+        print ('[ERR] Please use ".csv" as the extension of input file')
         return False
-    elif inputname == '' or inputname.find('.csv') < 0:
-        print ('[ERR] Please enter name for the input file and be sure to include ".csv" in input file name.')
+    elif outputname.find('.csv') < 0:
+        print ('[ERR] Please use ".csv" as the extension of output file.')
         return False
-    elif outputname == '' or outputname.find('.csv') < 0:
-        print ('[ERR] Please enter name for the output file and be sure to include ".csv" in output file name.')
-        return False
-    elif logname == '' or logname.find('.log') < 0:
-        print ('[ERR] Please enter name for the log file name and be sure to include ".log" in log file name.')
+    elif logname.find('.log') < 0:
+        print ('[ERR] Please use ".log" as the extension of log file.')
         return False
 
     return True
@@ -90,13 +91,12 @@ if __name__ == '__main__':
     count = 0
     text, output = '', ''
     chkr = SpellChecker("en_US")
-    result = DataFrame(columns=('misspelling', 'dcount', 'scount', 'url', 'sentence' ))
+    result = DataFrame(columns=('misspelling', 'duplication', 'wiki', 'wikiurl', 'url', 'sentence' ))
     excludedwords = 'www,href,http,https,html,br'
     chrome_options = Options()
     chrome_options.add_argument('--headless')
     chrome_options.add_argument('--window-size=1920x1080')
     chrome_options.add_argument('disable-gpu')
-    useragent = 'user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36'
     chrome_options.add_argument(useragent)
 
     if init():
@@ -104,16 +104,15 @@ if __name__ == '__main__':
         df = pd.read_csv(inputname)
         print (df.to_string())
         for link in df['link']:
-            status = getCode(link)
-            if status == False:
-                continue
             tokens = link.split('/')
             lasttoken = tokens[len(tokens) - 1]
-            if lasttoken.find('#') >= 0 or lasttoken.find('?') >= 0 or lasttoken.find('%') >= 0 or excludedfiles.find(lasttoken[-4:]) >= 0:
-
+            if link.find('?') >= 0 or lasttoken.find('#') >= 0 or lasttoken.find('%') >= 0 or excludedfiles.find(lasttoken[-4:]) >= 0:
                 continue
-            html = urlopen(link)
-            soup = BeautifulSoup(html, 'lxml')
+            (status, page) = getCode(link)
+            if status == False:
+                continue
+            #page = urlopen(link)
+            soup = BeautifulSoup(page, 'lxml')
             output = output + '\n* ' + link
             for text in soup.findAll('p'):
                 text = unescape(" ".join(cleanhtml(str(text)).split()))
@@ -133,41 +132,42 @@ if __name__ == '__main__':
                         adding = '[ERR] (' + str(count) + ') ' + str(err.word)
                         print ('%s' %adding)
                         output = output + '\n' + adding
-                        rows = [str(err.word), -1, -1, link, text]
+                        rows = [str(err.word), -1, -1, '', link, text]
                         result.loc[len(result)] = rows
         f.write(output)
         f.close()
         # Counting for duplicated misspellings
         for rowdata in result.values:
-            if rowdata[1] == -1:
+            if rowdata[1] == -1:	# rowdata[1]: duplication
                 duplicatedcount = len(result.loc[result['misspelling'] == rowdata[0]])
-                result.loc[result['misspelling'] == rowdata[0], 'dcount'] = duplicatedcount
+                result.loc[result['misspelling'] == rowdata[0], 'duplication'] = duplicatedcount
             else:
                 continue
-        # Getting values from Googling
-        print ('\n[OK] Getting the number of results searched by Googling')
+        # Getting values from Wikipedia
+        print ('\n + Finding words misspelled on Wikipedia')
+        browser = webdriver.Chrome(chrome_options=chrome_options)
+        browser.implicitly_wait(3)
+        browser.get('https://en.wikipedia.org/wiki/Main_Page')
         for rowdata in result.values:
-            if rowdata[2] == -1 and rowdata[1] < 3:
-                browser = webdriver.Chrome(chrome_options=chrome_options)
-                browser.implicitly_wait(3)
-                browser.get('https://google.com')
-                word = '"' + rowdata[0] + '" site:https://en.wikipedia.org/wiki/' + Keys.RETURN
-                browser.find_element_by_id('lst-ib').send_keys(word)
-                try:
-                    element = browser.find_element_by_xpath('//*[@id="resultStats"]')
-                    elementtokens = element.text.split(' ')
-                    searchedcount = elementtokens[2][:-1]
-                    result.loc[result['misspelling'] == rowdata[0], 'scount'] = float(searchedcount.replace(',', ''))
-                    print (' + %s: About %s results' %(rowdata[0], searchedcount))
-                    browser.quit()
-                except:
-                    searchedcount = '0'
-                    result.loc[result['misspelling'] == rowdata[0], 'scount'] = float(searchedcount.replace(',', ''))
-                    print (' + %s: %s result' %(rowdata[0], searchedcount))
-                    browser.quit()
-                    continue
+            time.sleep(0.2)
+            if rowdata[1] < 3 and rowdata[2] == -1:	# rowdata[2]: wiki 
+                word = rowdata[0] + Keys.RETURN
+                browser.find_element_by_id('searchInput').send_keys(word)
+                page = browser.page_source
+                soup = BeautifulSoup(page, 'html.parser')
+                if len(soup.findAll('a', attrs={'href': re.compile('/wiki/Wikipedia:Articles_for_creation')})) > 0:
+                    result.loc[result['misspelling'] == rowdata[0], 'wiki'] = False
+                    result.loc[result['misspelling'] == rowdata[0], 'wikiurl'] = browser.current_url
+                    print ('[ERR] %s: Not found' %(rowdata[0]))
+                    print (' + Link: %s' %browser.current_url)
+                else:
+                    result.loc[result['misspelling'] == rowdata[0], 'wiki'] = True
+                    result.loc[result['misspelling'] == rowdata[0], 'wikiurl'] = browser.current_url
+                    print ('[OK] %s: Found' %(rowdata[0]))
+                    print (' + Link: %s' %browser.current_url)
+        browser.quit()
         # Sorting result values
-        result.sort_values(by=['dcount', 'scount', 'misspelling', 'url'], ascending=[True, True, True, True], inplace=True)
+        result.sort_values(by=['duplication', 'wiki', 'misspelling', 'url'], ascending=[True, True, True, True], inplace=True)
         result.index = range(len(result))
         # Exporting to csv file
         result.to_csv(outputname, header=True, index=True)
@@ -175,3 +175,4 @@ if __name__ == '__main__':
 
     else:
         print ('[ERR] Initialization faliure')
+       
