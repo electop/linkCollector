@@ -9,3 +9,9 @@ link:smartthings site:stackoverflow.com
 
 [Reference]
 https://silveryflow.blog.me/120127644161
+https://stackoverflow.com/questions/19735250/running-a-python-script-from-php
+https://www.raspberrypi.org/forums/viewtopic.php?t=177851
+
+[Environment]
+sudo chown -R www-data:www-data /var/www/html
+sudo chmod -R 755 /var/www/html
