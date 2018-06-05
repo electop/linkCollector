@@ -18,3 +18,26 @@ http://channelofchaos.tistory.com/60
 [Environment]
 sudo chown -R www-data:www-data /var/www/html
 sudo chmod -R 755 /var/www/html
+
+<start.sh>
+#!/bin/bash
+/usr/bin/sudo ./run.sh $1
+
+<run.sh>
+#!/bin/bash
+sudo python3.5 /var/www/html/wp-content/plugins/0misspelling-checker/includes/test.py -i /var/www/html/wp-content/plugins/0misspelling-checker/includes/input.csv -o /var/www/html/result/output.csv -l /var/www/html/result/output.log
+
+</etc/sudoers.d/mysudoers>
+ubuntu1604	ALL=NOPASSWD: POWEROFF, SHUTDOWN, HALT, /usr/bin/update-manager, /usr/bin/apt-get
+www-data	ALL=NOPASSWD: /var/www/html/wp-content/plugins/0misspelling-checker/includes/start.sh
+%admin		ALL=(ALL) NOPASSWD: ALL
+
+<php samples>
+			//$command = 'pwd';
+			//$command = 'ls -al ./wp-content/plugins/0misspelling-checker/includes';
+			//$command = 'python ./wp-content/plugins/0misspelling-checker/includes/hello.py';
+			//$command = "python ./wp-content/plugins/0misspelling-checker/includes/test00.py -U root -P 'qwer1234!@' -H 127.0.0.1 -D wp_aitest";
+			$command = "/usr/bin/sudo -u root -S python3.5 ./wp-content/plugins/0misspelling-checker/includes/test00.py -U root -P 'qwer1234!@' -H 127.0.0.1 -D wp_aitest < ~/.sudopass/sudopass.secret";
+			//$command = 'python3.5 ./wp-content/plugins/0misspelling-checker/includes/test.py -i /var/www/html/wp-content/plugins/0misspelling-checker/includes/input.csv -o /var/www/html/result/output.csv -l /var/www/html/result/output.log';
+			$message = exec($command, $out, $status);
+                        print_r($message);
