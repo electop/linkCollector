@@ -11,6 +11,7 @@ link:smartthings site:stackoverflow.com
 https://silveryflow.blog.me/120127644161
 https://stackoverflow.com/questions/19735250/running-a-python-script-from-php
 https://www.raspberrypi.org/forums/viewtopic.php?t=177851
+http://www.itworld.co.kr/news/105290
 
 [Environment]
 sudo chown -R www-data:www-data /var/www/html
