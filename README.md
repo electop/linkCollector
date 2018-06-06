@@ -1,5 +1,4 @@
 # LinkCollector
----------------------------------------------------
 *※ This guidance is based on Python 3.6.*
 1. Prerequisites
 * 9 Libraries
