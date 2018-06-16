@@ -3,6 +3,7 @@ __author__ = 'electopx@gmail.com'
 import re
 import sys
 import time
+import html
 import socket
 import argparse
 import threading
@@ -74,25 +75,26 @@ def checkTail(tu):
     return tu.rstrip('/').rstrip()
 
 def getCode(tu):
+
     global rdfList		# rdfList: List array for final result
     global start, num, cu
     global timedOutList		# timedOutList: List array for timeout urls
     code = ''
     req = None
-    html = None
+    htmlPage = None
     status = False
     visited = True
 
     try:
         req = Request(tu)
         req.add_header('User-Agent', userAgentString)
-        #html = urlopen(req, timeout=120)
-        html = urlopen(req, timeout=10)
-        if html.geturl().find(tu) < 0:
+        #htmlPage = urlopen(req, timeout=120)
+        htmlPage = urlopen(req, timeout=10)
+        if htmlPage.geturl().find(tu) < 0:
             code = "302"
-            status = True if html.geturl().find(cu)>=0 else False
+            status = True if htmlPage.geturl().find(cu)>=0 else False
         else:
-            code = str(html.status)
+            code = str(htmlPage.status)
             status = True
         print('\n[OK] The server could fulfill the request to\n%s' %tu)
     except HTTPError as e:
@@ -107,7 +109,7 @@ def getCode(tu):
         if tu not in timedOutList:
             timedOutList.append(tu)
             visited = False
-            return (status, html, visited)
+            return (status, htmlPage, visited)
 
     parent = dfDict[tu]['parent']
     rows = [parent, tu, code]
@@ -125,7 +127,7 @@ def getCode(tu):
         sv = "{0:.1f}".format((counts * 100) / num) + '%'
         print ('+ Searching %s(%d/%d, %d): %d(min) %s(sec)' %(sv, counts, num, maxnum, cm, cs))
 
-    return (status, html, visited)
+    return (status, htmlPage, visited)
 
 def getLink(tu, depth):
 
@@ -134,7 +136,7 @@ def getLink(tu, depth):
     global cu, maxnum, num, maxDepth	# maxnum: maximum # of data frame
     excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst.com.zip'
 
-    (status, html, visited) = getCode(tu)
+    (status, htmlPage, visited) = getCode(tu)
     dfDict[tu]['visited'] = visited
     
     if status == False:
@@ -153,9 +155,11 @@ def getLink(tu, depth):
         return False
     else:
         try:
-            soup = BeautifulSoup(html.read().decode('utf-8','ignore'), 'lxml')
+            soup = BeautifulSoup(htmlPage.read().decode('utf-8', 'ignore'), 'lxml')
         except Exception as e:
             print('[ERR] %s @%s' %(str(e), tu))
+            return False
+        # Adding URL from <a> tag
         for link in soup.findAll('a', attrs={'href': re.compile('^http|^/')}):
             nl = link.get('href')	# nl: new link
             nl = checkTail(nl)
@@ -167,16 +171,14 @@ def getLink(tu, depth):
             if nl.find(cu) >= 0 and nl != tu:
                 tokens = nl.split('/')
                 lasttoken = tokens[-1]
-                if lasttoken.find('?') >= 0 or lasttoken.find('#') >= 0:
-                    continue
-                elif nl.find('github') < 0 or\
+                if nl.find('github') < 0 or\
                     ((nl.find('github') > 0 and len(tokens) > 5) and\
                     (nl.find('blob/master') > 0 or nl.find('tree/master') > 0)):
                     maxnum = maxnum + 1 
                     if nl not in dfDict:
                         dfDict[nl]={'parent':tu, 'visited':False, 'depth':depth+1}
                         num = num + 1
-                        print ('+ Adding rows(%d):\n%s'%(num, nl))
+                        #print ('+ Adding rows(%d):\n%s'%(num, nl))
         return True
 
 def runMultithread(tu):
@@ -185,7 +187,7 @@ def runMultithread(tu):
     threadsnum = 0
 
     if len(dfDict) == 0:
-        dfDict[tu]={'parent':"",'visited': False, 'depth': 0}
+        dfDict[tu]={'parent':"",'visited':False, 'depth':0}
         num += 1
         print ('First running with getLink()')
 
@@ -211,9 +213,12 @@ def runMultithread(tu):
 def result(tu, cm, cs):
 
     global df, path, num, rdfList
-    rdf = DataFrame(rdfList, columns=['parent','link','code']) # rdf: data frame for final result
-    rdf.sort_values(by=['parent', 'link'], ascending=[True,True], inplace=True)
+
+    # rdf: data frame for final result
+    rdf = DataFrame(rdfList, columns=['parent', 'link', 'code']) 
+    rdf.sort_values(by=['link', 'parent'], ascending=[True, True], inplace=True)
     rdf.index = range(len(rdf))
+
     count = num
     num = len(rdf)
 
