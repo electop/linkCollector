@@ -3,11 +3,13 @@ __author__ = 'electopx@gmail.com'
 import re
 import sys
 import time
+import socket
 import argparse
 import threading
 import http.client
 from bs4 import BeautifulSoup
 from datetime import datetime
+#from urllib.parse import unquote
 from urllib.parse import urlparse
 from urllib.request import urlopen
 from urllib.request import Request
@@ -18,20 +20,24 @@ http.client.HTTPConnection._http_vsn = 10
 http.client.HTTPConnection._http_vsn_str = 'HTTP/1.0'
 
 start = time.time()
-rnum, dnum, maxnum = 0, 0, 0
+num, maxnum = 0, 0
 maxthreadsnum = 15	# If the performance of your PC is low, please adjust this value to 5 or less.
+maxDepth = 5
 cu, du, url, prefix, path = '', '', '', '', ''
-rdf = DataFrame(columns=('link', 'code'))
-df = DataFrame(columns=('link', 'visited'))
+rdfList=[]
+dfDict={}
+timedOutList=[]
+df = DataFrame(columns=('parent', 'link', 'visited', 'depth'))
 userAgentString = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.117 Safari/537.36"
 
 def init():
 
-    global maxthreadsnum
+    global maxthreadsnum, maxDepth
     global cu, du, url, prefix		# cu: current URL, du: domain URL
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Site link checker", formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-T", "--target-url", help="Target URL to test")
-    parser.add_argument("-M", "--max-thread", type=int, help="Maximum number of threads")
+    parser.add_argument("-M", "--max-thread", type=int, default=15, help="Maximum number of threads\nDefault: 15")
+    parser.add_argument("-d", "--max-depth", type=int, default=5, help="Maximum number of depth to crawl\nDefault: 5")
     args = parser.parse_args()
 
     if args.target_url:
@@ -50,41 +56,63 @@ def init():
 
     if args.max_thread:
         maxthreadsnum = int(args.max_thread)
+    
+    if args.max_depth:
+        if (maxDepth > 0):
+            maxDepth = int(args.max_depth)
+        else:
+            maxDepth = 1
 
     return True
 
 # Deletion the last '/' of the target URL
-def checkTail(str):
+def checkTail(tu):
 
-    return str.rstrip('/').rstrip()
+    #if tu[len(tu) - 1] == '/':
+    #    tu = tu[:-1]
+
+    return tu.rstrip('/').rstrip()
 
 def getCode(tu):
-
-    global rdf		# rdf: data frame for final result
-    global start, rnum, dnum
+    global rdfList		# rdfList: List array for final result
+    global start, num, cu
+    global timedOutList		# timedOutList: List array for timeout urls
     code = ''
-    status = False
     req = None
     html = None
+    status = False
+    visited = True
 
     try:
         req = Request(tu)
         req.add_header('User-Agent', userAgentString)
-        html = urlopen(req)
-        code = str(html.status)
+        #html = urlopen(req, timeout=120)
+        html = urlopen(req, timeout=10)
+        if html.geturl().find(tu) < 0:
+            code = "302"
+            status = True if html.geturl().find(cu)>=0 else False
+        else:
+            code = str(html.status)
+            status = True
         print('\n[OK] The server could fulfill the request to\n%s' %tu)
-        status = True
     except HTTPError as e:
         code = str(e.code)
-        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s\n+ %s' %(tu, code))
+        print('\n[ERR] HTTP Error: The server couldn\'t fulfill the request to\n%s' %tu)
     except URLError as e:
         code = e.reason
         print('\n[ERR] URL Error: We failed to reach in\n%s\n+ %s' %(tu, code))
+    except socket.timeout as e:
+        code = e.errno
+        print('\n[ERR] TIMEOUT Error: We failed to reach in\n%s\n+ %s' %(tu, code))
+        if tu not in timedOutList:
+            timedOutList.append(tu)
+            visited = False
+            return (status, html, visited)
 
-    rows = {'link': tu, 'code': code}
-    rdf = rdf.append(rows, ignore_index=True)
-    rnum = rnum + 1
-    counts = len(rdf)
+    parent = dfDict[tu]['parent']
+    rows = [parent, tu, code]
+    rdfList.append(rows)
+    counts = len(rdfList)
 
     end = time.time()
     cs = end - start
@@ -94,49 +122,40 @@ def getCode(tu):
     if counts == 1:
         print ('+ Searching target URL: %d(min) %s(sec)' %(cm, cs))
     else:
-        sv = "{0:.1f}".format((counts * 100) / dnum) + '%'
-        print ('+ Searching %s(%d/%d, %d): %d(min) %s(sec)' %(sv, counts, dnum, maxnum, cm, cs))
+        sv = "{0:.1f}".format((counts * 100) / num) + '%'
+        print ('+ Searching %s(%d/%d, %d): %d(min) %s(sec)' %(sv, counts, num, maxnum, cm, cs))
 
-    return (status, html)
+    return (status, html, visited)
 
-def getLink(tu, visited):
+def getLink(tu, depth):
+
     global df	# df: data frame
-    global cu, maxnum, dnum, maxDepth	# maxnum: maximum # of data frame
-    #excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst'
-    # The most common file types and file extensions
-    excludedfiles = '.aif.cda.mid.mp3.mpa.ogg.wav.wma.wpl.7z.arj.deb.pkg.rar.rpm.tar.z.zip.bin.dmg.iso.toa.vcd.csv.dat.db.log.mdb.sav.sql.tar.xml.apk.bat.bin.cgi.com.exe.gad.jar.py.wsf.fnt.fon.otf.ttf.ai.bmp.gif.ico.jpe.png.ps.psd.svg.tif.asp.cer.cfm.cgi.js.jsp.par.php.py.rss.key.odp.pps.ppt.ppt.c.cla.cpp.cs.h.jav.sh.swi.vb.ods.xlr.xls.xls.bak.cab.cfg.cpl.cur.dll.dmp.drv.icn.ico.ini.lnk.msi.sys.tmp.3g2.3gp.avi.flv.h26.m4v.mkv.mov.mp4.mpg.rm.swf.vob.wmv.doc.odt.pdf.rtf.tex.txt.wks.wpd'
+    global dfDict
+    global cu, maxnum, num, maxDepth	# maxnum: maximum # of data frame
+    excludedfiles = '.ico.png.jpg.jpeg.gif.pdf.bmp.tif.svg.pic.rle.psd.pdd.raw.ai.eps.iff.fpx.frm.pcx.pct.pxr.sct.tga.vda.icb.vst.com.zip'
 
-    if visited:
-        #print ('[OK] It\'s already visited to the URL below and skip.\n%s\n' %tu)
-        return False
-
-    if len(df.loc[df['link'] == tu]) > 0:
-        df.loc[df['link'] == tu, 'visited'] = True
-    else:
-        rows = {'link': tu, 'visited': True}
-        df = df.append(rows, ignore_index=True)
-        dnum = dnum + 1
-
-    (status, html) = getCode(tu)
-
+    (status, html, visited) = getCode(tu)
+    dfDict[tu]['visited'] = visited
+    
     if status == False:
         return False
+    
+    if depth + 1 > maxDepth:
+        return False
 
+    tu = checkTail(tu)
     tokens = tu.split('/')
     lasttoken = tokens[-1]
 
-    if tu.find('?') >= 0:
+    if lasttoken.find('?') >= 0 or lasttoken.find('#') >= 0 or\
+        (len(tokens) > 3 and excludedfiles.find(lasttoken[-4:]) >= 0):
         print ('+ This URL is skipped because it`s not the target of the getLink().')
-        return False
-    elif lasttoken.find('#') >= 0 or lasttoken.find('%') >= 0 or excludedfiles.find(lasttoken[-4:]) >= 0:
-        print ('+ This "%s" is skipped because it`s not the target of the getLink().' %lasttoken)
         return False
     else:
         try:
             soup = BeautifulSoup(html.read().decode('utf-8','ignore'), 'lxml')
         except Exception as e:
-            print('+', str(e))
-
+            print('[ERR] %s @%s' %(str(e), tu))
         for link in soup.findAll('a', attrs={'href': re.compile('^http|^/')}):
             nl = link.get('href')	# nl: new link
             nl = checkTail(nl)
@@ -146,25 +165,31 @@ def getLink(tu, visited):
                 else:
                     nl = prefix.replace('//', '') + nl
             if nl.find(cu) >= 0 and nl != tu:
-                maxnum = maxnum + 1
-                if len(df.loc[df['link'] == nl]) == 0:
-                    rows = {'link': nl, 'visited': False}
-                    df = df.append(rows, ignore_index=True)
-                    dnum = dnum + 1
-                    print ('+ Adding rows(%d):\n%s'%(dnum, rows))
-
+                tokens = nl.split('/')
+                lasttoken = tokens[-1]
+                if lasttoken.find('?') >= 0 or lasttoken.find('#') >= 0:
+                    continue
+                elif nl.find('github') < 0 or\
+                    ((nl.find('github') > 0 and len(tokens) > 5) and\
+                    (nl.find('blob/master') > 0 or nl.find('tree/master') > 0)):
+                    maxnum = maxnum + 1 
+                    if nl not in dfDict:
+                        dfDict[nl]={'parent':tu, 'visited':False, 'depth':depth+1}
+                        num = num + 1
+                        print ('+ Adding rows(%d):\n%s'%(num, nl))
         return True
 
 def runMultithread(tu):
 
-    global maxthreadsnum
+    global maxthreadsnum, dfDict, num
     threadsnum = 0
 
-    if len(df) == 0:
-        getLink(tu, False)
+    if len(dfDict) == 0:
+        dfDict[tu]={'parent':"",'visited': False, 'depth': 0}
+        num += 1
         print ('First running with getLink()')
 
-    threads = [threading.Thread(target=getLink, args=(durl[0], durl[1])) for durl in df.values]
+    threads = [threading.Thread(target=getLink, args=(durl, dfDict[durl]['depth'])) for durl in dfDict if dfDict[durl]['visited'] == False]
 
     for thread in threads:
         threadsnum = threading.active_count()
@@ -185,32 +210,27 @@ def runMultithread(tu):
 
 def result(tu, cm, cs):
 
-    global rdf, df, path, dnum
-
-    rdf.sort_values(by='link', ascending=True, inplace=True)
-    #rdf.sort_values(by=['code', 'link'], ascending=[False, True], inplace=True)
-    rdf.drop_duplicates(subset='link', inplace=True, keep='first')
+    global df, path, num, rdfList
+    rdf = DataFrame(rdfList, columns=['parent','link','code']) # rdf: data frame for final result
+    rdf.sort_values(by=['parent', 'link'], ascending=[True,True], inplace=True)
     rdf.index = range(len(rdf))
-    count = dnum
-    dnum = len(rdf)
-    print ('+ updating the total number of links from %d to %d' %(count, dnum))
+    count = num
+    num = len(rdf)
 
+    print ('+ updating the total number of links from %d to %d' %(count, num))
     print ('[OK] Result')
-    print (rdf.to_string())
-    #print (df.to_string())
 
     target = tu.replace('://','_').replace('/','_')
-    path = datetime.now().strftime('%Y-%m-%d_%H-%M_')
-    path = path + cm + '(min)' + cs + '(sec)_' + target + '.csv'
+    path = datetime.now().strftime('%Y-%m-%d_%H-%M')
+    path = path + '_' + cm + '(min)' + cs + '(sec)_' + target + '.csv'
     rdf.to_csv(path, header=True, index=True)
-    #df.to_csv('df_' + path, header=True, index=True)
 
     return len(rdf)
 
 if __name__ == "__main__":
 
     if init():
-        while len(df) == 0 or len(df.loc[df['visited'] == 0]) > 0:
+        while len(dfDict) == 0 or len(rdfList)<len(dfDict):
             runMultithread(url)
         end = time.time()
         cs = end - start
