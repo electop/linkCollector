@@ -88,11 +88,10 @@ def getCode(tu):
     try:
         req = Request(tu)
         req.add_header('User-Agent', userAgentString)
-        #htmlPage = urlopen(req, timeout=120)
-        htmlPage = urlopen(req, timeout=10)
+        htmlPage = urlopen(req, timeout=120)
         if htmlPage.geturl().find(tu) < 0:
             code = "302"
-            status = True if htmlPage.geturl().find(cu)>=0 else False
+            status = True if htmlPage.geturl().find(cu) >= 0 else False
         else:
             code = str(htmlPage.status)
             status = True
